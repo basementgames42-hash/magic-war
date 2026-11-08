@@ -57,5 +57,5 @@ if ($LASTEXITCODE -ne 0) { throw "git push failed." }
 
 Write-Host ""
 Write-Host "Pushed. GitHub is deploying it now (about 1 minute):"
-Write-Host "  https://github.com/a-k983/magic-war/actions"
-Write-Host "Live at: https://a-k983.github.io/magic-war/"
+Write-Host "  https://github.com/basementgames42-hash/magic-war/actions"
+Write-Host "Live at: https://basementgames42-hash.github.io/magic-war/"
