@@ -8,8 +8,6 @@
 [ext_resource type="Texture2D" uid="uid://dok5q3y320hds" path="res://scenes/ui/skin/bar_big.png" id="6_barbig"]
 [ext_resource type="Texture2D" uid="uid://botikuu6rsd1m" path="res://scenes/ui/skin/bar_small.png" id="7_barsmall"]
 [ext_resource type="Texture2D" uid="uid://da1mknfql7fn7" path="res://scenes/pickups/health_potion.svg" id="8_potion"]
-[ext_resource type="Texture2D" uid="uid://b51m2ctbcrv7u" path="res://scenes/assets/Tiny Swords (Free Pack)/Tiny Swords (Free Pack)/UI Elements/UI Elements/Icons/Icon_07.png" id="9_play"]
-[ext_resource type="Texture2D" uid="uid://hrov7if1f2hx" path="res://scenes/assets/Tiny Swords (Free Pack)/Tiny Swords (Free Pack)/UI Elements/UI Elements/Icons/Icon_08.png" id="10_back"]
 [ext_resource type="PackedScene" path="res://scenes/world/world.tscn" id="11_world"]
 [ext_resource type="Texture2D" uid="uid://cqadw8i58a8ce" path="res://scenes/assets/Tiny Swords (Free Pack)/Tiny Swords (Free Pack)/UI Elements/UI Elements/Icons/Icon_03.png" id="12_coin"]
 [ext_resource type="Script" uid="uid://dj0hkuvm7rw6l" path="res://scenes/ui/virtual_joystick.gd" id="13_joystick"]
@@ -110,7 +108,7 @@ texture = ExtResource("6_barbig")
 patch_margin_left = 24
 patch_margin_right = 24
 
-[node name="HPLabel" type="Label" parent="HUD/HPBar"]
+[node name="HPLabel" type="Label" parent="HUD/HPBar" unique_id=1191134202]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

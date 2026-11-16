@@ -13,9 +13,9 @@ config_version=5
 config/name="Magic War"
 run/main_scene="res://scenes/ui/loading_screen.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
-config/icon="res://icon.svg"
-boot_splash/show_image=false
 boot_splash/bg_color=Color(0.13, 0.17, 0.1, 1)
+boot_splash/show_image=false
+config/icon="res://icon.svg"
 
 [autoload]
 
