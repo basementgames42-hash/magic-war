@@ -13,6 +13,7 @@ const BALANCE: Balance = preload("res://config/balance.tres")
 const SHOT = preload("res://scenes/enemies/enemy_shot.gd")
 const HAZARD = preload("res://scenes/enemies/enemy_hazard.gd")
 const FX = preload("res://scenes/spells/spell_fx.gd")
+const DamageNumber = preload("res://scenes/ui/damage_number.gd")
 const ENEMY_ART: String = "res://scenes/assets/Tiny Swords (Enemy Pack)/Tiny Swords (Enemy Pack)/Enemy Pack/"
 const BONE: Texture2D = preload(ENEMY_ART + "Gnoll/Gnoll_Bone.png")
 const HARPOON: Texture2D = preload(ENEMY_ART + "Harpoon Shark/Harpoon.png")
@@ -480,8 +481,11 @@ func spawn_hazard(pos: Vector2, radius: float, fuse: float, linger: float, color
 	get_parent().add_child(hazard)
 
 func take_damage(amount: int) -> void:
-	health -= maxi(roundi(amount * (1.0 - damage_resist)), 1)
+	var dealt: int = maxi(roundi(amount * (1.0 - damage_resist)), 1)
+	health -= dealt
 	Audio.play("enemy_hit", -14.0, 0.15)
+	# Big numbers over elites (they're the ones scaled up).
+	DamageNumber.spawn(global_position, dealt, DamageNumber.ENEMY_HIT, scale.x > 1.0)
 
 	anim.modulate = Color(5, 5, 5)  # White-hot flash
 	await get_tree().create_timer(0.1).timeout

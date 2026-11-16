@@ -10,6 +10,7 @@ signal died
 
 # Tuning lives in res://config/balance.tres (speed, damage, streaks...).
 const BALANCE: Balance = preload("res://config/balance.tres")
+const DamageNumber = preload("res://scenes/ui/damage_number.gd")
 
 var move_speed: float  # From BALANCE.player_speed; upgrades multiply it
 var character: Dictionary = Characters.by_id(GameData.character)
@@ -106,6 +107,7 @@ func take_damage(amount: int) -> void:
 		# touch the swarm streak.
 		anim.modulate = Color(0.7, 0.9, 1.0, 0.5)
 		flash_timer = 0.12
+		DamageNumber.spawn(global_position, "DODGE", DamageNumber.DODGED)
 		return
 
 	# Swarm streak: rapid back-to-back hits hurt more and more.
@@ -125,6 +127,7 @@ func take_damage(amount: int) -> void:
 	health -= dealt
 	health_changed.emit(health, max_health)
 	Audio.play("player_hurt", -2.0)
+	DamageNumber.spawn(global_position, dealt, DamageNumber.PLAYER_HIT, true)
 
 	# Feedback: brief red flash (no translucency — you're never invincible).
 	anim.modulate = Color(1, 0.3, 0.3)

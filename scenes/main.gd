@@ -186,6 +186,7 @@ func update_damage_bonus() -> void:
 func _on_health_changed(current_hp: int, max_hp: int) -> void:
 	$HUD/HPBar.max_value = max_hp
 	$HUD/HPBar.value = current_hp
+	$HUD/HPBar/HPLabel.text = "%d / %d" % [maxi(current_hp, 0), max_hp]
 
 func win_level() -> void:
 	run_over = true
