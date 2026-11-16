@@ -3,6 +3,8 @@ extends Area2D
 # Looks like a flickering comet with an ember trail; explodes on impact.
 
 const FX = preload("res://scenes/spells/spell_fx.gd")
+const BALANCE: Balance = preload("res://config/balance.tres")
+const SPLASH_RADIUS: float = 80.0  # Explosion reach around the impact
 const EXPLOSION_SHEET: Texture2D = preload("res://scenes/assets/Tiny Swords (Free Pack)/Tiny Swords (Free Pack)/Particle FX/Explosion_01.png")
 
 @export var speed: float = 500.0
@@ -65,8 +67,21 @@ func _on_body_entered(body: Node2D) -> void:
 	# and we spawn on top of them!
 	if body.is_in_group("enemies"):
 		body.take_damage(damage)
+		splash(body)
 		explode()
 		queue_free()
+
+func splash(hit: Node2D) -> void:
+	# The explosion is real: everyone else close to the impact takes a share
+	# of the damage (BALANCE.fireball_splash), so the Monk can handle crowds.
+	var share: int = roundi(damage * BALANCE.fireball_splash)
+	if share <= 0:
+		return
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		# Measured from the enemy that was hit: the fireball touches its outer
+		# edge, a good way short of its middle.
+		if enemy != hit and enemy.global_position.distance_to(hit.global_position) < SPLASH_RADIUS:
+			enemy.take_damage(share)
 
 func explode() -> void:
 	# Spawned into the world (our parent), not as our children — we are

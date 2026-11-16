@@ -9,8 +9,8 @@ const BALANCE: Balance = preload("res://config/balance.tres")
 @export var cooldown: float = 3.0
 var damage: int = BALANCE.frost_damage  # Tune in res://config/balance.tres
 @export var radius: float = 250.0
-@export var slow_factor: float = 0.5     # Enemies drop to 50% speed
-@export var slow_duration: float = 2.0
+@export var slow_factor: float = 0.5     # Enemies drop to 50% speed...
+@export var slow_duration: float = 2.5   # ...and turn blue, for this long
 
 var timer: float = 0.0
 

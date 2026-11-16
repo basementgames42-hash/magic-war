@@ -68,12 +68,15 @@ extends Resource
 ## weapon at level 1, catching up to (and in a crowd passing) it when maxed.
 ## Monk's Fireball damage per hit.
 @export_range(1, 50) var fireball_damage: int = 1
-## Lightning Arc damage per strike (one enemy every 1.5s).
-@export_range(1, 50) var lightning_damage: int = 12
+## Share of Fireball damage the explosion deals to other enemies close to the
+## impact (0.5 = half). Without it the Monk can only fight one enemy at a time.
+@export_range(0.0, 1.0, 0.05) var fireball_splash: float = 0.5
+## Lightning Arc damage per strike (one enemy every 1.2s).
+@export_range(1, 50) var lightning_damage: int = 20
 ## Frost Nova damage per pulse (everything nearby every 3s, and slows them).
-@export_range(1, 50) var frost_damage: int = 6
+@export_range(1, 50) var frost_damage: int = 10
 ## Arcane Orbit damage per orb hit.
-@export_range(1, 50) var orbit_damage: int = 6
+@export_range(1, 50) var orbit_damage: int = 9
 ## Warrior's Cleave damage per enemy hit.
 @export_range(1, 50) var cleave_damage: int = 1
 ## Lancer's Lance Thrust damage per enemy hit.
@@ -92,18 +95,18 @@ extends Resource
 @export_range(1, 10) var weapon_max_level: int = 5
 ## Runeward Circle: damage per tick at level 1, and extra per level.
 @export_range(1, 50) var runeward_damage: int = 4
-@export_range(0, 20) var runeward_damage_per_level: int = 2
+@export_range(0, 20) var runeward_damage_per_level: int = 1
 ## Runeward Circle: radius in pixels at level 1, and extra per level.
 @export_range(50.0, 400.0, 5.0) var runeward_radius: float = 130.0
-@export_range(0.0, 150.0, 5.0) var runeward_radius_per_level: float = 40.0
+@export_range(0.0, 150.0, 5.0) var runeward_radius_per_level: float = 25.0
 ## Runeward Circle: seconds between damage ticks.
 @export_range(0.1, 2.0, 0.05) var runeward_tick: float = 0.5
 ## Starfall: damage at level 1, and extra per level.
-@export_range(1, 50) var starfall_damage: int = 15
-@export_range(0, 20) var starfall_damage_per_level: int = 5
+@export_range(1, 50) var starfall_damage: int = 14
+@export_range(0, 20) var starfall_damage_per_level: int = 2
 ## Moonreaver: damage per pass at level 1, and extra per level.
-@export_range(1, 50) var moonreaver_damage: int = 10
-@export_range(0, 20) var moonreaver_damage_per_level: int = 4
+@export_range(1, 50) var moonreaver_damage: int = 8
+@export_range(0, 20) var moonreaver_damage_per_level: int = 1
 ## Thornwake: damage per bramble tick at level 1, and extra per level.
 @export_range(1, 50) var thornwake_damage: int = 4
 @export_range(0, 20) var thornwake_damage_per_level: int = 2

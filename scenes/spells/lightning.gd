@@ -4,7 +4,7 @@ extends Node2D
 const FX = preload("res://scenes/spells/spell_fx.gd")
 const BALANCE: Balance = preload("res://config/balance.tres")
 
-@export var cooldown: float = 1.5
+@export var cooldown: float = 1.2
 var damage: int = BALANCE.lightning_damage  # Tune in res://config/balance.tres
 @export var strike_range: float = 400.0
 

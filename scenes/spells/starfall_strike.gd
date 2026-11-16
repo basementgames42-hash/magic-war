@@ -5,8 +5,10 @@ extends Node2D
 const FX = preload("res://scenes/spells/spell_fx.gd")
 const EXPLOSION_SHEET: Texture2D = preload("res://scenes/assets/Tiny Swords (Free Pack)/Tiny Swords (Free Pack)/Particle FX/Explosion_01.png")
 
-const DROP_TIME: float = 0.55
+const DROP_TIME: float = 0.45
 const DROP_HEIGHT: float = 520.0
+const BODY_REACH: float = 24.0  # An enemy counts as hit if its body (about this
+								# wide, times its scale) overlaps the blast
 
 var damage: int = 1
 var radius: float = 95.0
@@ -21,7 +23,7 @@ func _process(delta: float) -> void:
 	if age < DROP_TIME:
 		return
 	for enemy in get_tree().get_nodes_in_group("enemies"):
-		if global_position.distance_to(enemy.global_position) < radius:
+		if global_position.distance_to(enemy.global_position) < radius + BODY_REACH * enemy.scale.x:
 			enemy.take_damage(damage)
 	Audio.play("fireball_hit", -6.0, 0.15)
 	FX.play_sheet(get_parent(), global_position, EXPLOSION_SHEET, 20.0, radius / 95.0)

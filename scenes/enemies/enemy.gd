@@ -44,7 +44,9 @@ const LUCK_UPGRADES: Dictionary = {
 
 var health: int
 var player: Node2D = null
-var speed_multiplier: float = 1.0
+var speed_multiplier: float = 1.0  # Below 1 while slowed (Frost Nova)
+var slow_timer: float = 0.0        # Seconds of slow left
+const SLOW_TINT := Color(0.45, 0.7, 1.0)  # Frozen-blue body while slowed
 var attack_timer: float = 0.0
 # Set by Main before add_child to swap the look. Needs "run" and "attack"
 # animations. Left null = the skeleton frames baked into the scene.
@@ -100,6 +102,11 @@ func _physics_process(delta: float) -> void:
 	ai_clock += delta
 	ai_timer -= delta
 	shot_timer -= delta
+	if slow_timer > 0.0:
+		slow_timer -= delta
+		if slow_timer <= 0.0:
+			speed_multiplier = 1.0
+			anim.modulate = Color.WHITE
 	speed_factor = 1.0
 	can_bite = true
 	var direction: Vector2 = call("brain_" + ai, to_player)
@@ -491,20 +498,20 @@ func take_damage(amount: int) -> void:
 	await get_tree().create_timer(0.1).timeout
 	if not is_instance_valid(self):
 		return
-	anim.modulate = Color.WHITE  # Back to normal — no red tint now!
+	anim.modulate = body_tint()  # Back to normal (still blue if slowed)
 
 	if health <= 0:
 		die()
 
+func body_tint() -> Color:
+	return SLOW_TINT if slow_timer > 0.0 else Color.WHITE
+
 func apply_slow(factor: float, duration: float) -> void:
-	speed_multiplier = factor
-	# Visual cue for the frost effect.
-	anim.modulate = Color(0.6, 0.8, 1.0)
-	await get_tree().create_timer(duration).timeout
-	if not is_instance_valid(self):
-		return
-	speed_multiplier = 1.0
-	anim.modulate = Color.WHITE
+	# Slowed and tinted blue until the timer runs out (_physics_process puts
+	# both back). A second slow refreshes the timer and keeps the stronger one.
+	speed_multiplier = minf(speed_multiplier, factor) if slow_timer > 0.0 else factor
+	slow_timer = maxf(slow_timer, duration)
+	anim.modulate = SLOW_TINT
 
 func drop_chances() -> Dictionary:
 	# Luck shop upgrades raise every enemy's chance for their pickup, and the
