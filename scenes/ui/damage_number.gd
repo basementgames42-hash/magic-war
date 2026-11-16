@@ -25,6 +25,8 @@ var origin: Vector2  # Where the hit was
 var born: float      # Seconds (engine clock) when it appeared
 
 static func spawn(pos: Vector2, value: Variant, color: Color, big: bool = false) -> void:
+	if not GameData.show_damage_numbers:
+		return  # Off in Settings (the default)
 	var tree := Engine.get_main_loop() as SceneTree
 	if tree == null or tree.current_scene == null:
 		return

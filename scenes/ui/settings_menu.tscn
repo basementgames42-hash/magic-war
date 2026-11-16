@@ -52,10 +52,18 @@ horizontal_alignment = 1
 
 [node name="FullscreenButton" type="Button" parent="CenterContainer/VBoxContainer/Panel/VBoxContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(400, 68)
+custom_minimum_size = Vector2(400, 58)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Fullscreen: Off"
+icon = ExtResource("2_gear")
+
+[node name="DamageNumbersButton" type="Button" parent="CenterContainer/VBoxContainer/Panel/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(400, 58)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Damage Numbers: Off"
 icon = ExtResource("2_gear")
 
 [node name="Shortcuts" type="Label" parent="CenterContainer/VBoxContainer/Panel/VBoxContainer"]
