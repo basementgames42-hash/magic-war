@@ -269,13 +269,20 @@ func brain_skirmish(to_player: Vector2) -> Vector2:
 		enter_state(0, 0.0)
 	return -ai_dir
 
-# Gnoll: keeps its distance and throws spinning bones.
+# Gnoll: walks at you, throwing spinning bones on the way.
 func brain_kite(to_player: Vector2) -> Vector2:
-	if shot_timer <= 0.0 and to_player.length() < 560.0:
+	if shot_timer <= 0.0 and to_player.length() < 560.0 and can_fire():
 		shot_timer = 2.4
 		show_attack()
 		spawn_shot(BONE, to_player.normalized(), 430.0, 14.0, 0.0)
-	return keep_distance(to_player, 300.0, 460.0)
+	return ranged_advance(to_player)
+
+func ranged_advance(to_player: Vector2) -> Vector2:
+	# Every ranged enemy closes in like the rest; it only stands still while
+	# its attack animation plays (show_attack), then walks on at once.
+	if attack_anim_timer > 0.0:
+		return Vector2.ZERO
+	return to_player.normalized()
 
 func keep_distance(to_player: Vector2, near: float, far: float) -> Vector2:
 	# Back off when too close, approach when too far, sidestep in between.
@@ -331,17 +338,18 @@ func brain_burrow(to_player: Vector2) -> Vector2:
 func brain_slither(to_player: Vector2) -> Vector2:
 	return to_player.normalized().rotated(sin(ai_clock * 2.6) * 1.2)
 
-# Harpoon Shark: stops at long range, aims, throws along a line you can read.
+# Harpoon Shark: closes in, stops to aim, throws along a line you can read,
+# then moves on as soon as the throw is done.
 func brain_harpoon(to_player: Vector2) -> Vector2:
 	match ai_state:
 		0:
-			if to_player.length() < 540.0 and shot_timer <= 0.0:
+			if to_player.length() < 540.0 and shot_timer <= 0.0 and can_fire():
 				enter_state(1, 0.85)
 				ai_dir = to_player.normalized()
 				aim_line = ai_dir * 900.0 / scale.x
 				queue_redraw()
 				return Vector2.ZERO
-			return keep_distance(to_player, 380.0, 520.0)
+			return ranged_advance(to_player)
 		1:
 			wind_up()
 			if ai_timer <= 0.0:
@@ -362,11 +370,11 @@ func _draw() -> void:
 
 # Bomb Fish: lobs bombs at where you are now. Keep moving.
 func brain_lob(to_player: Vector2) -> Vector2:
-	if shot_timer <= 0.0 and to_player.length() < 520.0:
+	if shot_timer <= 0.0 and to_player.length() < 520.0 and can_fire():
 		shot_timer = 2.6
 		show_attack()
-		spawn_hazard(player.global_position, 115.0, 1.1, 0.0, Color(1.0, 0.25, 0.2), BOMB)
-	return keep_distance(to_player, 260.0, 420.0)
+		spawn_hazard(player.global_position, 115.0, 1.1, 0.0, Color(1.0, 0.25, 0.2), BOMB, true)
+	return ranged_advance(to_player)
 
 # Turtle: plods forward, pulls into its nearly unbreakable shell, then rushes.
 func brain_shell(to_player: Vector2) -> Vector2:
@@ -426,17 +434,14 @@ func teleport_near_player(distance: float) -> void:
 	global_position = get_parent().open_spot_near(player.global_position, distance)
 	FX.burst(get_parent(), global_position, Color(0.8, 0.3, 1.0), 14, 180.0, 0.35, 0.25)
 
-# Hex Shaman: stays back casting bolts that curve after you, and teleports
-# away if you get close.
+# Hex Shaman: closes in casting bolts that curve after you.
 func brain_hex(to_player: Vector2) -> Vector2:
-	if to_player.length() < 180.0 and ai_timer <= 0.0:
-		ai_timer = 4.0
-		teleport_near_player(460.0)
-	if shot_timer <= 0.0 and to_player.length() < 620.0:
+	if shot_timer <= 0.0 and to_player.length() < 620.0 and can_fire():
 		shot_timer = 2.8
 		show_attack()
-		spawn_shot(HEX_BOLT, to_player.normalized(), 260.0, 0.0, 1.5)
-	return keep_distance(to_player, 340.0, 480.0)
+		# Curves after you, but gently enough that sidestepping still works.
+		spawn_shot(HEX_BOLT, to_player.normalized(), 240.0, 0.0, 0.7)
+	return ranged_advance(to_player)
 
 # Minotaur: a bull rush with a wide turning circle. It tracks you, but can't
 # turn fast. Lead it into a wall and it stuns itself.
@@ -464,6 +469,25 @@ func brain_bullrush(to_player: Vector2) -> Vector2:
 		enter_state(0, 0.0)
 	return Vector2.ZERO
 
+# Shared by every enemy: the earliest moment (engine clock, seconds) the next
+# shot may be fired, so ranged enemies take turns (BALANCE.enemy_shots_per_second).
+static var next_shot_at: float = 0.0
+
+func on_screen() -> bool:
+	# Inside the visible part of the world, a little in from the edges.
+	var view: Rect2 = get_viewport().get_canvas_transform().affine_inverse() * get_viewport_rect()
+	return view.grow(-40.0).has_point(global_position)
+
+func can_fire() -> bool:
+	# Ranged brains ask this before shooting. No = wait a moment and ask again
+	# (a short random delay so a crowd doesn't all retry on the same frame).
+	var now: float = Time.get_ticks_msec() / 1000.0
+	if not on_screen() or now < next_shot_at:
+		shot_timer = randf_range(0.25, 0.7)
+		return false
+	next_shot_at = now + 1.0 / BALANCE.enemy_shots_per_second
+	return true
+
 func spawn_shot(sheet: Texture2D, direction: Vector2, speed: float, spin: float, homing: float) -> void:
 	var shot: Node2D = SHOT.new()
 	shot.sheet = sheet
@@ -476,8 +500,9 @@ func spawn_shot(sheet: Texture2D, direction: Vector2, speed: float, spin: float,
 	get_parent().add_child(shot)
 
 func spawn_hazard(pos: Vector2, radius: float, fuse: float, linger: float, color: Color,
-		icon: Texture2D = null) -> void:
+		icon: Texture2D = null, ranged: bool = false) -> void:
 	var hazard: Node2D = HAZARD.new()
+	hazard.ranged = ranged
 	hazard.radius = radius * scale.x
 	hazard.fuse = fuse
 	hazard.linger = linger

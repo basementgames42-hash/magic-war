@@ -20,6 +20,7 @@ var pending_coins: float = 0.0  # Greed: gold owed minus paid (<= 0 = paid ahead
 var endless: bool = false       # Mode of the run being started (set by the title screen)
 var endless_best: float = 0.0   # Longest endless survival, in seconds (saved)
 var level_index: int = 0        # Map of the run being started (index into Levels.MAPS)
+var test_map: Dictionary = {}   # A test map from Levels (editor only), overrides level_index; not saved
 var levels_unlocked: int = 1    # How many maps can be played; a win adds the next (saved)
 var character: String = "warrior"  # Id from Characters.ROSTER (saved)
 # Characters the player may pick (saved, shared by both modes). Only ever

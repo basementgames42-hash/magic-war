@@ -12,7 +12,7 @@ const PROP = preload("res://scenes/world/prop.gd")
 @export var half_size: float = 2400.0      # Arena spans -half..+half on both axes
 @export var spawn_clearing: float = 320.0  # Keep the player's start area open
 
-var map: Dictionary = Levels.MAPS[GameData.level_index]
+var map: Dictionary = Levels.current()
 var rng := RandomNumberGenerator.new()
 # Where props already stand: x, y = position, z = how much room it needs
 # (bigger for buildings, so nothing gets wedged against their walls and

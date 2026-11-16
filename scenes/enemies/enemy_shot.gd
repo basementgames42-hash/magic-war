@@ -39,5 +39,5 @@ func _process(delta: float) -> void:
 	rotation = rotation + spin * delta if spin != 0.0 else direction.angle()
 	sprite.frame = int(lifetime * 10.0) % sprite.hframes
 	if player.visible and to_player.length() < hit_radius:
-		player.take_damage(damage)
+		player.take_damage(damage, true)  # Ranged: reduced, no swarm streak
 		queue_free()

@@ -23,7 +23,7 @@ var elapsed: float = 0.0
 var next_elite_at: float = 60.0
 var run_over: bool = false
 var wave: int = 0                           # How many waves have started (0 = first)
-var map: Dictionary = Levels.MAPS[GameData.level_index]
+var map: Dictionary = Levels.current()
 var enemy_order: Array[Dictionary] = []     # Enemy types in wave order (see config/levels.gd)
 var enemy_type: Dictionary = {}             # The type spawning now
 var wave_interval: float = 60.0             # Seconds per enemy type, set in _ready
@@ -210,12 +210,16 @@ func _on_health_changed(current_hp: int, max_hp: int) -> void:
 func win_level() -> void:
 	run_over = true
 	var index: int = GameData.level_index
-	GameData.complete_level(index)
+	var testing: bool = not GameData.test_map.is_empty()
+	if not testing:  # A test map unlocks nothing
+		GameData.complete_level(index)
 	GameData.save_game()
 	Audio.stop_music()
 	Audio.play("victory", 0.0, 0.0)
 	var stats: Dictionary = run_stats()
-	if index + 1 < Levels.MAPS.size():
+	if testing:
+		$GameOverScreen.open("TEST COMPLETE\nYou survived %s." % map["name"], stats)
+	elif index + 1 < Levels.MAPS.size():
 		stats["next_level"] = index + 1
 		$GameOverScreen.open("VICTORY!\n%s is yours. %s awaits." % [map["name"],
 			Levels.MAPS[index + 1]["name"]], stats)

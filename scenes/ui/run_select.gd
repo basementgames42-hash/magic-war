@@ -110,6 +110,7 @@ func select_character(id: String) -> void:
 
 func _on_start_pressed() -> void:
 	GameData.save_game()  # Remembers the chosen character for next time
+	GameData.test_map = {}  # Back to the real maps after any test run
 	if GameData.endless:
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
 	else:

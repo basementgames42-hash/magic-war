@@ -135,6 +135,13 @@ extends Resource
 @export_range(0.25, 5.0, 0.05) var damage_taken_multiplier: float = 1.5
 ## Extra damage taken per new enemy type (wave). 0.25 = +25% per wave.
 @export_range(0.0, 1.0, 0.05) var wave_damage_bonus: float = 0.25
+## Ranged hits (thrown bones, harpoons, hex bolts, lobbed bombs) do this
+## share of a melee hit (0.5 = half), and never build the swarm streak below.
+@export_range(0.1, 1.0, 0.05) var ranged_damage_multiplier: float = 0.5
+## Most enemy shots per second across ALL ranged enemies together, so a crowd
+## of throwers takes turns instead of firing in one wall. Only enemies on
+## screen may shoot, so every shot can be seen coming.
+@export_range(0.25, 10.0, 0.25) var enemy_shots_per_second: float = 1.5
 ## Seconds between one enemy's hits. Lower = swarms hurt faster.
 @export_range(0.1, 3.0, 0.05) var enemy_attack_cooldown: float = 0.6
 ## Hits within this many seconds of the last one build a swarm streak.

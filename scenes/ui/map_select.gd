@@ -24,6 +24,15 @@ func _ready() -> void:
 	fit_to_screen()
 	%PlayButton.pressed.connect(_on_play_pressed)
 	%BackButton.pressed.connect(_on_back_pressed)
+	# Test maps: only when run from the Godot editor (debug builds), never in
+	# the exported game.
+	if OS.is_debug_build():
+		var test := Button.new()
+		test.text = "Test: Ranged"
+		test.custom_minimum_size = Vector2(200, 68)
+		test.tooltip_text = Levels.ranged_test()["blurb"]
+		test.pressed.connect(_on_test_pressed)
+		%PlayButton.add_sibling(test)
 
 func fit_to_screen() -> void:
 	# Phones: boxes two to a row. The scroll container covers short screens.
@@ -67,7 +76,12 @@ func select_map(index: int) -> void:
 		map_buttons[i].modulate = SELECTED_TINT if i == index else Color.WHITE
 
 func _on_play_pressed() -> void:
+	GameData.test_map = {}
 	GameData.save_game()
+	get_tree().change_scene_to_file("res://scenes/main.tscn")
+
+func _on_test_pressed() -> void:
+	GameData.test_map = Levels.ranged_test()
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
 func _on_back_pressed() -> void:

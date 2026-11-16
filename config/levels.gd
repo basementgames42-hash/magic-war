@@ -133,6 +133,29 @@ const MAPS: Array[Dictionary] = [
 	},
 ]
 
+# Test map, for trying things out: only offered from the map select screen
+# when the game runs from the Godot editor (see map_select.gd). It's not in
+# MAPS, so it never counts toward unlocks, endless or the save file.
+static func ranged_test() -> Dictionary:
+	var test: Dictionary = MAPS[1].duplicate()  # Emberwaste's look and scenery
+	test["name"] = "Ranged Test"
+	test["blurb"] = "Nothing but throwers, bombers and casters."
+	test["health"] = 1.0
+	test["damage"] = 0.0
+	test["spawn"] = 1.0
+	test["enemies"] = [
+		{"name": "Gnoll", "run": "Walk", "attack": "Throw", "ai": "kite", "speed": 0.95, "health": 0.9},
+		{"name": "Bomb Fish", "run": "Run", "attack": "Shoot", "ai": "lob", "speed": 0.9, "health": 1.0},
+		{"name": "Harpoon Shark", "run": "Run", "attack": "Throw", "ai": "harpoon", "speed": 0.9, "health": 1.1},
+		{"name": "Hex Shaman", "run": "Run", "attack": "Attack", "ai": "hex", "speed": 0.85, "health": 1.2},
+	]
+	return test
+
+# The map the run being started uses: a test map if one was picked,
+# otherwise the chosen map.
+static func current() -> Dictionary:
+	return GameData.test_map if not GameData.test_map.is_empty() else MAPS[GameData.level_index]
+
 # Endless mode starts on the first map and slowly drifts through the others
 # (main.gd drift_map), and cycles through every enemy above, a little of
 # each map at a time, so a long run sees the whole bestiary.

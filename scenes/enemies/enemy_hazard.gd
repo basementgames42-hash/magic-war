@@ -13,6 +13,7 @@ var tick: float = 0.6
 var damage: int = 1
 var color: Color = Color(1.0, 0.35, 0.15)
 var icon: Texture2D = null     # Optional sprite sitting in the middle (a bomb)
+var ranged: bool = false       # Thrown from afar (a lobbed bomb): hits as a ranged attack
 
 var player: Node2D = null
 var age: float = 0.0
@@ -47,7 +48,7 @@ func _process(delta: float) -> void:
 func hurt_player() -> void:
 	if player != null and player.visible \
 			and global_position.distance_to(player.global_position) < radius:
-		player.take_damage(damage)
+		player.take_damage(damage, ranged)
 
 func _draw() -> void:
 	if age < fuse:
