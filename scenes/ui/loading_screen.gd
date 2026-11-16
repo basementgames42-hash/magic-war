@@ -75,6 +75,9 @@ var tip_label: Label
 var curtain: ColorRect
 
 func _ready() -> void:
+	# Music from the very first screen (on the web the browser may hold it
+	# until the first tap; see Audio's "tap for sound" hint).
+	Audio.play_music("loading")
 	ResourceLoader.load_threaded_request(NEXT_SCENE)
 	tip_index = randi() % TIPS.size()
 	for i in 60:

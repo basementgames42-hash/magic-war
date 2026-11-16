@@ -77,21 +77,18 @@ func _ready() -> void:
 	camera.limit_top = -edge
 	camera.limit_right = edge
 	camera.limit_bottom = edge
+	update_clock()  # 05:00 from the first frame, not the scene's 00:00
 
 func _process(delta: float) -> void:
 	if run_over:
 		return
 	elapsed += delta
-	
+	update_clock()  # First, so a win leaves the countdown on 00:00
+
 	# Survived the full run: victory. (Endless has no finish line.)
 	if not endless and elapsed >= BALANCE.win_time_minutes * 60.0:
 		win_level()
 		return
-	
-	# Clock display, mm:ss. The %02d pads with zeroes: 65s -> 01:05.
-	var minutes: int = int(elapsed) / 60
-	var seconds: int = int(elapsed) % 60
-	$HUD/TimerLabel.text = "%02d:%02d" % [minutes, seconds]
 
 	# Difficulty ramp: spawn faster as time passes. 1.0s at start, floor of
 	# 0.25s (reached at ~2.5 min). Harder maps and a stronger player both
@@ -118,6 +115,21 @@ func _process(delta: float) -> void:
 	if elapsed >= next_elite_at:
 		next_elite_at += elite_interval
 		spawn_elite()
+
+func update_clock() -> void:
+	# Endless counts up (how long you've lasted). A map counts down to the
+	# level clear: 05:00 at the start, 00:00 = victory. The last 10 seconds
+	# glow red and pulse.
+	var clock: Label = $HUD/TimerLabel
+	if endless:
+		clock.text = format_time(elapsed)
+		return
+	var left: float = maxf(BALANCE.win_time_minutes * 60.0 - elapsed, 0.0)
+	clock.text = format_time(ceilf(left))
+	var final: bool = left <= 10.0
+	clock.modulate = Color(1.0, 0.45, 0.4) if final else Color.WHITE
+	clock.pivot_offset = clock.size / 2.0
+	clock.scale = Vector2.ONE * (1.0 + 0.08 * absf(sin(elapsed * PI)) if final else 1.0)
 
 func drift_map(delta: float) -> void:
 	# Endless: hold each map for a while, then drift slowly into the next one
@@ -211,20 +223,25 @@ func win_level() -> void:
 	run_over = true
 	var index: int = GameData.level_index
 	var testing: bool = not GameData.test_map.is_empty()
+	var stats: Dictionary = run_stats()
 	if not testing:  # A test map unlocks nothing
+		var unlocked_before: int = GameData.levels_unlocked
 		GameData.complete_level(index)
+		if GameData.levels_unlocked > unlocked_before:
+			# First win here: the victory screen and map select both celebrate it.
+			stats["unlocked_map"] = GameData.levels_unlocked - 1
+			GameData.map_to_celebrate = GameData.levels_unlocked - 1
 	GameData.save_game()
 	Audio.stop_music()
 	Audio.play("victory", 0.0, 0.0)
-	var stats: Dictionary = run_stats()
 	if testing:
-		$GameOverScreen.open("TEST COMPLETE\nYou survived %s." % map["name"], stats)
+		$GameOverScreen.open("TEST COMPLETE", "You survived %s." % map["name"], stats, true)
 	elif index + 1 < Levels.MAPS.size():
 		stats["next_level"] = index + 1
-		$GameOverScreen.open("VICTORY!\n%s is yours. %s awaits." % [map["name"],
-			Levels.MAPS[index + 1]["name"]], stats)
+		$GameOverScreen.open("VICTORY!", "%s is yours. %s awaits." % [map["name"],
+			Levels.MAPS[index + 1]["name"]], stats, true)
 	else:
-		$GameOverScreen.open("VICTORY!\nYou ended the Magic War.", stats)
+		$GameOverScreen.open("VICTORY!", "You ended the Magic War.", stats, true)
 
 func _on_player_died() -> void:
 	if revives_left > 0 and Ads.is_available():
@@ -260,9 +277,11 @@ func finish_run() -> void:
 	Audio.play("defeat", 0.0, 0.0)
 	var survived: String = format_time(elapsed)
 	if endless:
-		$GameOverScreen.open("YOU DIED\nEndless: survived %s" % survived, stats)
+		$GameOverScreen.open("DEFEATED", "You lasted %s in Endless." % survived, stats, false)
 	else:
-		$GameOverScreen.open("YOU DIED\nSurvived %s" % survived, stats)
+		var left: float = ceilf(maxf(BALANCE.win_time_minutes * 60.0 - elapsed, 0.0))
+		$GameOverScreen.open("DEFEATED", "%s%s was left on the clock." % [
+			"So close! " if left <= 60.0 else "", format_time(left)], stats, false)
 
 static func format_time(seconds: float) -> String:
 	return "%02d:%02d" % [int(seconds) / 60, int(seconds) % 60]
@@ -284,6 +303,8 @@ func run_stats() -> Dictionary:
 		"upgrades": $LevelUpMenu.upgrades_taken,
 		"endless": endless,
 		"wave": wave + 1,
+		"time": elapsed,
+		"kills": kills,
 	}
 
 func spawn_point() -> Vector2:

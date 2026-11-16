@@ -21,7 +21,7 @@ func _ready() -> void:
 	_reset_rest_position()
 
 func _reset_rest_position() -> void:
-	# Where the faint "you can touch here" hint rests when no finger is down.
+	# Where the stick would sit with no finger down (it isn't drawn then).
 	if touch_index == -1:
 		base_pos = Vector2(radius + 60.0, size.y - radius - 60.0)
 		knob_pos = base_pos
@@ -56,11 +56,10 @@ func _release() -> void:
 	_reset_rest_position()
 
 func _draw() -> void:
-	# Only touch screens get the stick; keyboard players never see it.
-	if not DisplayServer.is_touchscreen_available():
+	# Drawn only while a finger is down, under that finger; nothing on screen
+	# otherwise (and keyboard players never see it).
+	if touch_index == -1:
 		return
-	var active: bool = touch_index != -1
-	var a: float = 1.0 if active else 0.35
-	draw_circle(base_pos, radius, Color(0.05, 0.08, 0.15, 0.35 * a))
-	draw_arc(base_pos, radius, 0.0, TAU, 48, Color(0.75, 0.85, 1.0, 0.6 * a), 3.0)
-	draw_circle(knob_pos, radius * 0.42, Color(0.8, 0.9, 1.0, 0.75 * a))
+	draw_circle(base_pos, radius, Color(0.05, 0.08, 0.15, 0.35))
+	draw_arc(base_pos, radius, 0.0, TAU, 48, Color(0.75, 0.85, 1.0, 0.6), 3.0)
+	draw_circle(knob_pos, radius * 0.42, Color(0.8, 0.9, 1.0, 0.75))

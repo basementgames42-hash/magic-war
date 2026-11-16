@@ -13,12 +13,20 @@ const LOCK_ICON = preload("res://scenes/ui/lock_icon.gd")
 var map_buttons: Array[Button] = []
 
 func _ready() -> void:
+	# A map unlocked since this screen was last seen starts out padlocked,
+	# then breaks its lock (like a new hero on Hero Select).
+	var celebrate: int = GameData.map_to_celebrate
 	for i in Levels.MAPS.size():
-		var button: Button = make_map_card(i)
+		var button: Button = make_map_card(i, GameData.is_level_unlocked(i) and i != celebrate)
 		%MapRow.add_child(button)
 		map_buttons.append(button)
 		button.pressed.connect(select_map.bind(i))
 	select_map(mini(GameData.level_index, GameData.levels_unlocked - 1))
+	if celebrate >= 0 and GameData.is_level_unlocked(celebrate):
+		get_tree().create_timer(0.6).timeout.connect(break_lock.bind(celebrate))
+	if celebrate >= 0:
+		GameData.map_to_celebrate = -1
+		GameData.save_game()
 
 	WindowControls.layout_changed.connect(fit_to_screen)
 	fit_to_screen()
@@ -38,18 +46,19 @@ func fit_to_screen() -> void:
 	# Phones: boxes two to a row. The scroll container covers short screens.
 	%MapRow.columns = 2 if WindowControls.is_narrow() else 4
 
-func make_map_card(index: int) -> Button:
+func make_map_card(index: int, unlocked: bool) -> Button:
 	var map: Dictionary = Levels.MAPS[index]
-	var unlocked: bool = GameData.is_level_unlocked(index)
 	var button := Button.new()
 	button.toggle_mode = true
 	button.disabled = not unlocked
 	button.custom_minimum_size = MAP_SIZE
 	var preview: Control = MAP_PREVIEW.new()
+	preview.name = "Preview"
 	preview.index = index
 	preview.position = Vector2(12, 12)
 	button.add_child(preview)
 	var label := Label.new()
+	label.name = "Label"
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", 18)
@@ -65,9 +74,29 @@ func make_map_card(index: int) -> Button:
 		label.text = "%d. %s\nBeat %s" % [index + 1, map["name"], Levels.MAPS[index - 1]["name"]]
 		label.add_theme_color_override("font_color", Color(1.0, 0.86, 0.5))
 		var lock: Control = LOCK_ICON.new()
+		lock.name = "Lock"
 		lock.position = Vector2(MAP_SIZE.x / 2.0, 72.0) - lock.size * 0.5
 		button.add_child(lock)
 	return button
+
+func break_lock(index: int) -> void:
+	# The new map's padlock bursts, its preview lights up, and it can be picked.
+	var button: Button = map_buttons[index]
+	var lock: Control = button.get_node("Lock")
+	lock.shatter()
+	await lock.shattered
+	Audio.play("level_up", 0.0, 0.0)
+	var label: Label = button.get_node("Label")
+	label.remove_theme_color_override("font_color")
+	label.text = "%d. %s\nNEW!" % [index + 1, Levels.MAPS[index]["name"]]
+	button.disabled = false
+	var preview: Control = button.get_node("Preview")
+	var tween := create_tween()
+	tween.tween_property(preview, "modulate", Color(2.2, 2.0, 1.4), 0.12)  # Flash
+	tween.tween_property(preview, "modulate", Color.WHITE, 0.4)
+	button.pivot_offset = button.size * 0.5
+	tween.parallel().tween_property(button, "scale", Vector2.ONE * 1.06, 0.12)
+	tween.tween_property(button, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK)
 
 func select_map(index: int) -> void:
 	GameData.level_index = index

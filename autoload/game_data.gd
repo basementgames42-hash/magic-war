@@ -30,7 +30,9 @@ var unlocked_characters: Array[String] = []
 # lock-break plays there even if the game was closed in between.
 var new_unlocks: Array[String] = []
 var active_boost: String = ""   # Ad boost running now: "gold", "xp", "drops" or ""
-var shop_from_run: bool = false # Upgrade shop opened from the game-over screen (Back = play again)
+var shop_from_run: bool = false # Upgrade shop opened from the game-over screen (Back = carry on)
+var shop_back_text: String = "Play Again"  # What the shop's Back says then ("Next Level" after a win)
+var map_to_celebrate: int = -1  # Map just unlocked, whose padlock breaks on map select (saved)
 var show_damage_numbers: bool = false  # Settings menu toggle (saved), both modes
 
 # Meta upgrade levels the player has purchased. Keys must match
@@ -157,6 +159,7 @@ func save_game() -> void:
 		"unlocked_characters": unlocked_characters,
 		"new_unlocks": new_unlocks,
 		"show_damage_numbers": show_damage_numbers,
+		"map_to_celebrate": map_to_celebrate,
 	}
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	file.store_string(JSON.stringify(data))
@@ -172,6 +175,7 @@ func load_game() -> void:
 	coins = int(data.get("coins", 0))
 	endless_best = float(data.get("endless_best", 0.0))
 	show_damage_numbers = bool(data.get("show_damage_numbers", false))
+	map_to_celebrate = int(data.get("map_to_celebrate", -1))
 	levels_unlocked = clampi(int(data.get("levels_unlocked", 1)), 1, Levels.MAPS.size())
 	# Add saved unlocks to the starters; never drop one that's already there.
 	for id in data.get("unlocked_characters", []):
