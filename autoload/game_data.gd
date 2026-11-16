@@ -34,10 +34,10 @@ var shop_from_run: bool = false # Upgrade shop opened from the game-over screen 
 # Meta upgrade levels the player has purchased. Keys must match
 # the shop and player code.
 var meta_upgrades: Dictionary = {
-	"max_hp": 0,       # +2 max HP per level
-	"damage": 0,       # +1 fireball damage per level
-	"move_speed": 0,   # +5% per level
-	"coin_gain": 0,    # +25% coins per level
+	"max_hp": 0,       # Max HP (BALANCE.vitality_per_level a level)
+	"damage": 0,       # Weapon damage (BALANCE.power_per_level a level)
+	"move_speed": 0,   # Move speed (BALANCE.agility_per_level a level)
+	"coin_gain": 0,    # Gold per coin (BALANCE.greed_per_level a level)
 	# "Luck" upgrades: each replaces a maxed upgrade above and raises one
 	# pickup's drop chance per level (amounts in res://config/balance.tres).
 	"potion_drop": 0,      # Health potions; unlocks when max_hp is maxed
@@ -98,12 +98,13 @@ func complete_level(index: int) -> void:
 	levels_unlocked = clampi(maxi(levels_unlocked, index + 2), 1, Levels.MAPS.size())
 
 func add_coins(amount: int) -> void:
-	# coin_gain (Greed) meta upgrade: every coin picked up is worth +25% per
-	# level. Coins are 1 gold each, so round UP and carry the overpayment as
-	# credit until the total reaches the next whole number (at +25%: 2, 1, 1,
-	# 1, then repeat = 5 gold per 4 coins). The bonus shows on the first coin,
-	# and the total still comes out exact.
-	pending_coins += amount * (1.0 + 0.25 * meta_upgrades["coin_gain"]) * boost_factor("gold")
+	# coin_gain (Greed) meta upgrade: every coin picked up is worth
+	# BALANCE.greed_per_level more per level. Coins are 1 gold each, so round
+	# UP and carry the overpayment as credit until the total reaches the next
+	# whole number (at +25%: 2, 1, 1, 1, then repeat = 5 gold per 4 coins).
+	# The bonus shows on the first coin, and the total still comes out exact.
+	pending_coins += amount * (1.0 + BALANCE.greed_per_level * meta_upgrades["coin_gain"]) \
+		* boost_factor("gold")
 	var gained: int = maxi(ceili(pending_coins - 0.0001), 0)  # 0.0001: float slop
 	pending_coins -= gained
 	coins += gained

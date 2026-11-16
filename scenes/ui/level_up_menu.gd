@@ -9,23 +9,23 @@ const BALANCE: Balance = preload("res://config/balance.tres")
 # (projectiles) or reach (melee).
 const WEAPON_UPGRADES: Dictionary = {
 	"fireball": [
-		{"name": "Sharper Flames", "desc": "Fireball damage +1", "id": "damage"},
-		{"name": "Rapid Fire", "desc": "Fire 25% faster", "id": "fire_rate"},
+		{"name": "Sharper Flames", "desc": "Fireball damage +{dmg}", "id": "damage"},
+		{"name": "Rapid Fire", "desc": "Fire {rate}% faster", "id": "fire_rate"},
 		{"name": "Blazing Bolts", "desc": "Fireballs fly 30% faster", "id": "projectile_speed"},
 	],
 	"cleave": [
-		{"name": "Honed Edge", "desc": "Cleave damage +1", "id": "damage"},
-		{"name": "Battle Rhythm", "desc": "Cleave 25% faster", "id": "fire_rate"},
+		{"name": "Honed Edge", "desc": "Cleave damage +{dmg}", "id": "damage"},
+		{"name": "Battle Rhythm", "desc": "Cleave {rate}% faster", "id": "fire_rate"},
 		{"name": "Wide Swing", "desc": "Cleave reach +15%", "id": "reach"},
 	],
 	"thrust": [
-		{"name": "Tempered Tip", "desc": "Lance damage +1", "id": "damage"},
-		{"name": "Quick Recovery", "desc": "Thrust 25% faster", "id": "fire_rate"},
+		{"name": "Tempered Tip", "desc": "Lance damage +{dmg}", "id": "damage"},
+		{"name": "Quick Recovery", "desc": "Thrust {rate}% faster", "id": "fire_rate"},
 		{"name": "Long Haft", "desc": "Lance reach +15%", "id": "reach"},
 	],
 	"arrow": [
-		{"name": "Barbed Heads", "desc": "Arrow damage +1", "id": "damage"},
-		{"name": "Quick Draw", "desc": "Shoot 25% faster", "id": "fire_rate"},
+		{"name": "Barbed Heads", "desc": "Arrow damage +{dmg}", "id": "damage"},
+		{"name": "Quick Draw", "desc": "Shoot {rate}% faster", "id": "fire_rate"},
 		{"name": "Strong Bow", "desc": "Arrows fly 30% faster", "id": "projectile_speed"},
 	],
 }
@@ -82,7 +82,11 @@ func describe(choice: Dictionary) -> String:
 		var level: int = player.weapon_level(choice["weapon"])
 		if level > 0:
 			return "Level %d: %s" % [level + 1, choice["more"]]
-	return choice["desc"]
+	# Starting-weapon upgrades: the real numbers come from balance.tres.
+	return choice["desc"].format({
+		"dmg": player.damage_pick(),
+		"rate": roundi(BALANCE.fire_rate_pick * 100.0),
+	})
 
 func weapon_recap() -> Array[String]:
 	# Spells in unlock order, with levels for the weapons that have them.

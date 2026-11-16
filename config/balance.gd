@@ -30,6 +30,16 @@ extends Resource
 @export_range(0.0, 0.2, 0.01) var spawn_rate_per_player_level: float = 0.03
 ## Spawning pauses at this many living enemies, so late runs stay playable.
 @export_range(50, 1000, 10) var max_enemies: int = 250
+## Extra normal enemy health per full minute of the run.
+@export_range(0, 20) var enemy_health_per_minute: int = 2
+## Extra elite health per full minute of the run.
+@export_range(0, 200) var elite_health_per_minute: int = 20
+## Endless: waves up to this one make enemies tougher (health) and hit harder
+## at the full per-wave rate, as in a normal map...
+@export_range(1, 20) var endless_full_waves: int = 5
+## ...and every wave after it counts this much (0.5 = half as much per wave),
+## so a long endless run keeps getting harder without hitting a sudden wall.
+@export_range(0.0, 1.0, 0.05) var endless_late_wave_factor: float = 0.5
 
 @export_group("Ads")
 ## Watch-an-ad revives allowed per run. 0 turns the offer off.
@@ -49,51 +59,69 @@ extends Resource
 
 @export_group("Player Speed")
 ## How fast the player moves at the start of a run (pixels/second).
-## Swift Boots (+15%) and the Agility shop upgrade (+5%/level) multiply this.
+## Swift Boots (+15%) and the Agility shop upgrade multiply this.
 @export_range(100.0, 600.0, 5.0) var player_speed: float = 280.0
 
 @export_group("Player Damage")
-## Fireball damage per hit. Each "Sharper Flames" / "Power" upgrade adds +1.
-@export_range(1, 20) var fireball_damage: int = 1
-## Chain Lightning damage per strike.
-@export_range(1, 20) var lightning_damage: int = 2
-## Frost Nova damage per pulse.
-@export_range(1, 20) var frost_damage: int = 1
+## Starting weapons (one per hero) — damage per hit. The level-up spells and
+## weapons below are tuned to sit on the same scale: weaker than the starting
+## weapon at level 1, catching up to (and in a crowd passing) it when maxed.
+## Monk's Fireball damage per hit.
+@export_range(1, 50) var fireball_damage: int = 1
+## Lightning Arc damage per strike (one enemy every 1.5s).
+@export_range(1, 50) var lightning_damage: int = 12
+## Frost Nova damage per pulse (everything nearby every 3s, and slows them).
+@export_range(1, 50) var frost_damage: int = 6
 ## Arcane Orbit damage per orb hit.
-@export_range(1, 20) var orbit_damage: int = 1
+@export_range(1, 50) var orbit_damage: int = 6
 ## Warrior's Cleave damage per enemy hit.
 @export_range(1, 50) var cleave_damage: int = 1
 ## Lancer's Lance Thrust damage per enemy hit.
 @export_range(1, 50) var thrust_damage: int = 1
 ## Archer's Piercing Arrow damage per enemy hit.
 @export_range(1, 50) var arrow_damage: int = 1
+## Starting-weapon damage level-up ("Honed Edge" etc.): adds this share of
+## the hero's base weapon damage per pick (0.15 = +3 on a 20-damage weapon).
+@export_range(0.05, 1.0, 0.05) var damage_pick_bonus: float = 0.15
+## Starting-weapon speed level-up ("Battle Rhythm" etc.): attacks this much
+## faster per pick (0.15 = 15% shorter wait between attacks).
+@export_range(0.05, 0.5, 0.05) var fire_rate_pick: float = 0.15
 
 @export_group("Level-Up Weapons")
 ## Highest level for Runeward Circle, Starfall, Moonreaver and Thornwake.
 @export_range(1, 10) var weapon_max_level: int = 5
 ## Runeward Circle: damage per tick at level 1, and extra per level.
-@export_range(1, 20) var runeward_damage: int = 1
-@export_range(0, 10) var runeward_damage_per_level: int = 1
+@export_range(1, 50) var runeward_damage: int = 4
+@export_range(0, 20) var runeward_damage_per_level: int = 2
 ## Runeward Circle: radius in pixels at level 1, and extra per level.
 @export_range(50.0, 400.0, 5.0) var runeward_radius: float = 130.0
 @export_range(0.0, 150.0, 5.0) var runeward_radius_per_level: float = 40.0
 ## Runeward Circle: seconds between damage ticks.
 @export_range(0.1, 2.0, 0.05) var runeward_tick: float = 0.5
 ## Starfall: damage at level 1, and extra per level.
-@export_range(1, 50) var starfall_damage: int = 3
-@export_range(0, 20) var starfall_damage_per_level: int = 2
+@export_range(1, 50) var starfall_damage: int = 15
+@export_range(0, 20) var starfall_damage_per_level: int = 5
 ## Moonreaver: damage per pass at level 1, and extra per level.
-@export_range(1, 50) var moonreaver_damage: int = 2
-@export_range(0, 20) var moonreaver_damage_per_level: int = 1
+@export_range(1, 50) var moonreaver_damage: int = 10
+@export_range(0, 20) var moonreaver_damage_per_level: int = 4
 ## Thornwake: damage per bramble tick at level 1, and extra per level.
-@export_range(1, 50) var thornwake_damage: int = 1
-@export_range(0, 20) var thornwake_damage_per_level: int = 1
+@export_range(1, 50) var thornwake_damage: int = 4
+@export_range(0, 20) var thornwake_damage_per_level: int = 2
 
 @export_group("Enemy Speed")
 ## Normal enemy move speed (pixels/second). Compare with Player Speed.
+## Each enemy type multiplies it (config/levels.gd).
 @export_range(50.0, 500.0, 5.0) var enemy_speed: float = 190.0
-## Elite (giant) enemy move speed.
-@export_range(50.0, 500.0, 5.0) var elite_speed: float = 125.0
+## Elite (giant) enemy move speed. Keep it below Enemy Speed: elites are slow.
+@export_range(30.0, 500.0, 5.0) var elite_speed: float = 70.0
+## From this enemy type on (3 = the 3rd type to appear in a run), enemies move
+## slower: multiplied by Later Enemy Speed. Same rule in normal and endless.
+@export_range(1, 20) var later_enemy_from_type: int = 3
+@export_range(0.3, 1.0, 0.05) var later_enemy_speed: float = 0.85
+## Those later enemies also speed up a touch per full minute of the run
+## (0.01 = +1% a minute), up to Enemy Speed Max Bonus in total.
+@export_range(0.0, 0.05, 0.005) var enemy_speed_per_minute: float = 0.01
+@export_range(0.0, 1.0, 0.05) var enemy_speed_max_bonus: float = 0.2
 
 @export_group("Enemy Damage")
 ## Base damage a normal enemy's hit does to the player (before multipliers).
@@ -127,11 +155,20 @@ extends Resource
 @export_range(0, 100) var coins_per_elite: int = 15
 
 @export_group("Shop Upgrades")
+## Max HP per Vitality level.
+@export_range(1, 10) var vitality_per_level: int = 2
+## Starting-weapon damage per Power level.
+@export_range(1, 10) var power_per_level: int = 1
+## Move speed per Agility level (0.04 = +4% a level, +40% at max).
+@export_range(0.0, 0.1, 0.01) var agility_per_level: float = 0.04
+## Gold per coin per Greed level (0.1 = +10% a level, 2 gold per coin at max).
+@export_range(0.0, 0.5, 0.05) var greed_per_level: float = 0.1
 ## Extra chance per Potion Luck level that any enemy drops a health potion
-## (0.05 = +5% per level, on top of the base ~1.2%). Unlocks once Vitality is maxed.
-@export_range(0.0, 0.1, 0.005) var potion_drop_per_level: float = 0.05
-## Extra nuke drop chance per Nuke Luck level (base 0.2%). Unlocks once Power is maxed.
-@export_range(0.0, 0.02, 0.001) var nuke_drop_per_level: float = 0.002
+## (0.03 = +3% per level, +30% at max, on top of the base ~1.2%). Unlocks once Vitality is maxed.
+@export_range(0.0, 0.1, 0.005) var potion_drop_per_level: float = 0.03
+## Extra nuke drop chance per Nuke Luck level (0.005 = +5% at max, on top of
+## the base 0.2%). A nuke kills every enemy on the map. Unlocks once Power is maxed.
+@export_range(0.0, 0.02, 0.001) var nuke_drop_per_level: float = 0.005
 ## Super Mode drop chance per level (no base chance). Unlocks once Agility is maxed.
 @export_range(0.0, 0.02, 0.001) var invincible_drop_per_level: float = 0.003
 ## Seconds of invincibility from one Super Mode pickup.
@@ -141,9 +178,9 @@ extends Resource
 ## HP healed per second per Regeneration level (0.05 = Lv 10 heals 1 HP every 2s).
 ## Unlocks once Potion Luck is maxed.
 @export_range(0.0, 0.5, 0.01) var regen_per_level: float = 0.05
-## Fireball cooldown cut per Rapid Fire level (0.04 = 4% faster each level).
-## Unlocks once Nuke Luck is maxed.
-@export_range(0.0, 0.09, 0.01) var fire_rate_per_level: float = 0.04
+## Starting-weapon cooldown cut per Rapid Fire level (0.03 = 3% a level,
+## 30% shorter at max). Unlocks once Nuke Luck is maxed.
+@export_range(0.0, 0.09, 0.01) var fire_rate_per_level: float = 0.03
 ## Chance to dodge a hit per Dodge level (0.03 = Lv 10 dodges 30%).
 ## Unlocks once Super Mode is maxed.
 @export_range(0.0, 0.09, 0.01) var dodge_per_level: float = 0.03

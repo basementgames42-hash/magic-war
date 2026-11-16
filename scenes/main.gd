@@ -176,11 +176,30 @@ func check_unlocks() -> void:
 func levels_gained() -> int:
 	return player.level - 1
 
+func wave_strength() -> float:
+	# How many waves' worth of toughness enemies have. A normal map only has
+	# five waves, so it's just the wave number; a long endless run counts the
+	# waves after the first few at a reduced rate, so it keeps getting harder
+	# without suddenly becoming unwinnable.
+	var full: int = BALANCE.endless_full_waves
+	if not endless or wave <= full:
+		return float(wave)
+	return full + (wave - full) * BALANCE.endless_late_wave_factor
+
+func enemy_speed_scale() -> float:
+	# From the Nth enemy type on (balance.tres), enemies start slower, then
+	# creep up a little with every full minute, capped. Elites follow it too.
+	if wave + 1 < BALANCE.later_enemy_from_type:
+		return 1.0
+	var ramp: float = minf(int(elapsed / 60.0) * BALANCE.enemy_speed_per_minute,
+		BALANCE.enemy_speed_max_bonus)
+	return BALANCE.later_enemy_speed * (1.0 + ramp)
+
 func update_damage_bonus() -> void:
 	# Every hit the player takes gets stronger with each new enemy type, on
 	# harder maps, and as the player levels up — including hits from enemies
 	# already on the field.
-	player.wave_damage_bonus = wave * BALANCE.wave_damage_bonus + map["damage"] \
+	player.wave_damage_bonus = wave_strength() * BALANCE.wave_damage_bonus + map["damage"] \
 		+ levels_gained() * BALANCE.damage_per_player_level
 
 func _on_health_changed(current_hp: int, max_hp: int) -> void:
@@ -291,7 +310,7 @@ func apply_scaling(enemy: CharacterBody2D) -> void:
 	# with each wave, each map and each level the player has gained.
 	# (Damage scales on the player instead — see update_damage_bonus.)
 	enemy.max_health = roundi(enemy.max_health * enemy_type["health"] * map["health"]
-		* (1.0 + wave * wave_health_bonus)
+		* (1.0 + wave_strength() * wave_health_bonus)
 		* (1.0 + levels_gained() * BALANCE.health_per_player_level))
 
 func get_enemy_frames() -> SpriteFrames:
@@ -331,11 +350,11 @@ func spawn_enemy() -> void:
 	if player == null:
 		return
 	var enemy: CharacterBody2D = make_enemy()
-	enemy.move_speed *= enemy_type["speed"]
+	enemy.move_speed *= enemy_type["speed"] * enemy_speed_scale()
 
-	# Enemies get +2 max HP per minute elapsed. Setting it BEFORE
+	# Enemies get extra max HP per full minute elapsed. Setting it BEFORE
 	# add_child works because _ready (health = max_health) runs on add.
-	enemy.max_health += int(elapsed / 60.0) * 2
+	enemy.max_health += int(elapsed / 60.0) * BALANCE.enemy_health_per_minute
 	apply_scaling(enemy)
 
 	add_child(enemy)
@@ -347,8 +366,8 @@ func spawn_elite() -> void:
 	var elite: CharacterBody2D = make_enemy()
 	elite.coin_drop = BALANCE.coins_per_elite
 	# Base elite stats come from res://config/balance.tres.
-	elite.max_health = BALANCE.elite_health + int(elapsed / 60.0) * 20
-	elite.move_speed = BALANCE.elite_speed * enemy_type["speed"]   # Slower, scarier
+	elite.max_health = BALANCE.elite_health + int(elapsed / 60.0) * BALANCE.elite_health_per_minute
+	elite.move_speed = BALANCE.elite_speed * enemy_type["speed"] * enemy_speed_scale()  # Slower, scarier
 	elite.contact_damage = BALANCE.elite_damage
 	elite.xp_drop = 10              # Kill reward: a shower of orbs
 	# Physically huge. Sheets bigger than the usual 192px frame need less

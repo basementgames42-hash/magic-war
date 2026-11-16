@@ -89,9 +89,9 @@ func _ready() -> void:
 	streak_bonus = BALANCE.streak_bonus
 	max_streak = BALANCE.max_streak
 	# Apply permanent meta upgrades purchased in the shop.
-	max_health += 2 * GameData.meta_upgrades["max_hp"]
-	weapon_damage += GameData.meta_upgrades["damage"]
-	move_speed *= 1.0 + 0.05 * GameData.meta_upgrades["move_speed"]
+	max_health += BALANCE.vitality_per_level * GameData.meta_upgrades["max_hp"]
+	weapon_damage += BALANCE.power_per_level * GameData.meta_upgrades["damage"]
+	move_speed *= 1.0 + BALANCE.agility_per_level * GameData.meta_upgrades["move_speed"]
 	regen_rate = BALANCE.regen_per_level * GameData.meta_upgrades["regen"]
 	fire_cooldown *= 1.0 - BALANCE.fire_rate_per_level * GameData.meta_upgrades["fire_rate"]
 	dodge_chance = BALANCE.dodge_per_level * GameData.meta_upgrades["dodge"]
@@ -340,15 +340,20 @@ func level_up_weapon(id: String) -> void:
 	else:
 		weapon_nodes[id].set_level(weapon_nodes[id].level + 1)
 
+# What one starting-weapon damage level-up adds: a share of the hero's base
+# damage, so it means the same on a 20-damage sword as on a 14-damage bow.
+func damage_pick() -> int:
+	return maxi(roundi(BALANCE.get(character["damage"]) * BALANCE.damage_pick_bonus), 1)
+
 func apply_upgrade(id: String) -> void:
 	if id.begins_with("level_"):
 		level_up_weapon(id.trim_prefix("level_"))
 		return
 	match id:
 		"damage":
-			weapon_damage += 1
+			weapon_damage += damage_pick()
 		"fire_rate":
-			fire_cooldown *= 0.75
+			fire_cooldown *= 1.0 - BALANCE.fire_rate_pick
 		"move_speed":
 			move_speed *= 1.15
 		"projectile_speed":

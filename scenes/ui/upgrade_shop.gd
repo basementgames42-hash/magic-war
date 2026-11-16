@@ -9,21 +9,24 @@ const BALANCE: Balance = preload("res://config/balance.tres")
 # GameData.MAX_UPGRADE_LEVEL; an optional "next" entry then takes over
 # the same button (with its own icon, if given), and can have a "next" too.
 var shop_items: Array = [
-	{"id": "max_hp", "name": "Vitality", "desc": "+2 Max HP", "button": "HpButton",
+	{"id": "max_hp", "name": "Vitality", "desc": "+%d Max HP" % BALANCE.vitality_per_level,
+		"button": "HpButton",
 		"next": {"id": "potion_drop", "name": "Potion Luck",
 			"desc": "+%s Potion Drops" % pct(BALANCE.potion_drop_per_level),
 			"icon": preload("res://scenes/pickups/health_potion.svg"),
 			"next": {"id": "regen", "name": "Regeneration",
 				"desc": "+%s HP/sec" % str(BALANCE.regen_per_level),
 				"icon": pixel_icon("res://scenes/assets/Items Pack/items/heart.png")}}},
-	{"id": "damage", "name": "Power", "desc": "+1 Damage", "button": "DamageButton",
+	{"id": "damage", "name": "Power", "desc": "+%d Damage" % BALANCE.power_per_level,
+		"button": "DamageButton",
 		"next": {"id": "nuke_drop", "name": "Nuke Luck",
 			"desc": "+%s Nuke Drops" % pct(BALANCE.nuke_drop_per_level),
 			"icon": pixel_icon("res://scenes/assets/Items Pack/items/skull.png"),
 			"next": {"id": "fire_rate", "name": "Rapid Fire",
 				"desc": "+%s Fire Rate" % pct(BALANCE.fire_rate_per_level),
 				"icon": pixel_icon("res://scenes/assets/Items Pack/items/arrow_flame.png")}}},
-	{"id": "move_speed", "name": "Agility", "desc": "+5% Speed", "button": "SpeedButton",
+	{"id": "move_speed", "name": "Agility", "desc": "+%s Speed" % pct(BALANCE.agility_per_level),
+		"button": "SpeedButton",
 		"next": {"id": "invincible_drop", "name": "Super Mode",
 			"desc": "+%s Drops (%ss invincible)" % [pct(BALANCE.invincible_drop_per_level),
 				str(BALANCE.invincible_duration).trim_suffix(".0")],
@@ -31,10 +34,12 @@ var shop_items: Array = [
 			"next": {"id": "dodge", "name": "Dodge",
 				"desc": "+%s Dodge Chance" % pct(BALANCE.dodge_per_level),
 				"icon": pixel_icon("res://scenes/assets/Items Pack/items/feather_phoenix.png")}}},
-	{"id": "coin_gain", "name": "Greed", "desc": "+25% Gold per Coin", "button": "CoinButton",
-		"tip": "Every coin you pick up is worth 25% more gold per level (enemies and elites,\n"
+	{"id": "coin_gain", "name": "Greed", "desc": "+%s Gold per Coin" % pct(BALANCE.greed_per_level),
+		"button": "CoinButton",
+		"tip": ("Every coin you pick up is worth %s more gold per level (enemies and elites,\n"
 			+ "normal and endless runs). Doesn't change how many coins drop.\n"
-			+ "Lv 4 = 2 gold per coin, Lv 10 = 3.5.",
+			+ "Lv 10 = %s gold per coin.") % [pct(BALANCE.greed_per_level),
+				str(1.0 + 10.0 * BALANCE.greed_per_level).trim_suffix(".0")],
 		"next": {"id": "magnet_drop", "name": "Magnet Luck",
 			"desc": "+%s Magnet Drops" % pct(BALANCE.magnet_drop_per_level),
 			"icon": preload("res://scenes/pickups/magnet.svg"),

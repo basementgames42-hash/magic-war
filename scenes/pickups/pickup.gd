@@ -2,7 +2,7 @@ extends Area2D
 # Pickup: rare drop from dead enemies. Walk over it to trigger its effect.
 #   health - red potion, heals the player
 #   magnet - pulls every XP orb and coin on the map to the player
-#   nuke   - skull, kills every enemy on screen
+#   nuke   - skull, kills every enemy on the map
 #   invincible - golden flame, Super Mode: a few seconds of invincibility
 
 # kind -> [texture, on-screen height in pixels]
@@ -46,9 +46,7 @@ func _on_body_entered(body: Node2D) -> void:
 	queue_free()
 
 func nuke() -> void:
-	# The visible part of the world: the viewport rect moved into world space.
-	var view: Rect2 = get_viewport().get_canvas_transform().affine_inverse() * get_viewport_rect()
+	# Every enemy on the map, on screen or not.
 	for enemy in get_tree().get_nodes_in_group("enemies"):
-		if view.has_point(enemy.global_position):
-			# false = no pickup roll, or one nuke would shower the map in drops.
-			enemy.die(false)
+		# false = no pickup roll, or one nuke would shower the map in drops.
+		enemy.die(false)
