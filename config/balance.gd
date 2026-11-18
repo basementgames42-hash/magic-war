@@ -110,10 +110,10 @@ extends Resource
 ## additional weapons): only offered once the player is past this level...
 @export_range(0, 50) var epic_min_level: int = 0
 ## ...at most this many per run...
-@export_range(1, 3) var max_epics: int = 2
+@export_range(1, 99) var max_epics: int = 99  # TESTING: unlimited; set back to 2
 ## ...and on this share of level-ups (when there's a pair not yet combined),
 ## so a run may get both, one or none.
-@export_range(0.05, 1.0, 0.05) var epic_offer_chance: float = 0.35
+@export_range(0.05, 1.0, 0.05) var epic_offer_chance: float = 1.0  # TESTING: every level-up; set back to 0.35
 ## Multiplies every Epic Combo's damage.
 @export_range(0.25, 4.0, 0.05) var epic_damage_scale: float = 1.0
 
