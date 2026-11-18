@@ -14,28 +14,28 @@ const WEAPON_UPGRADES: Dictionary = {
 	"fireball": [
 		{"name": "Sharper Flames", "desc": "Fireball damage +{dmg}", "id": "damage"},
 		{"name": "Rapid Fire", "desc": "Fire {rate}% faster", "id": "fire_rate"},
-		{"name": "Blazing Bolts", "desc": "Fireballs fly 30% faster", "id": "projectile_speed"},
+		{"name": "Blazing Bolts", "desc": "Fireballs fly {proj}% faster", "id": "projectile_speed"},
 	],
 	"cleave": [
 		{"name": "Honed Edge", "desc": "Cleave damage +{dmg}", "id": "damage"},
 		{"name": "Battle Rhythm", "desc": "Cleave {rate}% faster", "id": "fire_rate"},
-		{"name": "Wide Swing", "desc": "Cleave reach +15%", "id": "reach"},
+		{"name": "Wide Swing", "desc": "Cleave reach +{reach}%", "id": "reach"},
 	],
 	"thrust": [
 		{"name": "Tempered Tip", "desc": "Lance damage +{dmg}", "id": "damage"},
 		{"name": "Quick Recovery", "desc": "Thrust {rate}% faster", "id": "fire_rate"},
-		{"name": "Long Haft", "desc": "Lance reach +15%", "id": "reach"},
+		{"name": "Long Haft", "desc": "Lance reach +{reach}%", "id": "reach"},
 	],
 	"arrow": [
 		{"name": "Barbed Heads", "desc": "Arrow damage +{dmg}", "id": "damage"},
 		{"name": "Quick Draw", "desc": "Shoot {rate}% faster", "id": "fire_rate"},
-		{"name": "Strong Bow", "desc": "Arrows fly 30% faster", "id": "projectile_speed"},
+		{"name": "Strong Bow", "desc": "Arrows fly {proj}% faster", "id": "projectile_speed"},
 	],
 }
 
 # Entries with a "weapon" level up: they stay in the pool until BALANCE.weapon_max_level.
 var upgrade_pool: Array = [
-	{"name": "Swift Boots", "desc": "Move speed +15%", "id": "move_speed"},
+	{"name": "Swift Boots", "desc": "Move speed +{boots}%", "id": "move_speed"},
 	{"name": "Keen Eye", "desc": "Critical hit chance +{crit}% (crits deal {mult}x damage)", "id": "crit"},
 	{"name": "Lightning Arc", "desc": "NEW SPELL: zaps random enemies", "id": "unlock_lightning", "once": true},
 	{"name": "Frost Nova", "desc": "NEW SPELL: icy blast that slows", "id": "unlock_frost", "once": true},
@@ -105,6 +105,9 @@ func describe(choice: Dictionary) -> String:
 	var text: String = choice["desc"].format({
 		"dmg": player.damage_pick(),
 		"rate": roundi(BALANCE.fire_rate_pick * 100.0),
+		"reach": roundi(BALANCE.reach_pick * 100.0),
+		"proj": roundi(BALANCE.projectile_speed_pick * 100.0),
+		"boots": roundi(BALANCE.move_speed_pick * 100.0),
 		"crit": roundi(BALANCE.crit_chance_per_pick * 100.0),
 		"mult": str(BALANCE.crit_multiplier).trim_suffix(".0"),
 	})

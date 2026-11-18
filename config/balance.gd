@@ -59,7 +59,7 @@ extends Resource
 
 @export_group("Player Speed")
 ## How fast the player moves at the start of a run (pixels/second).
-## Swift Boots (+15%) and the Agility shop upgrade multiply this.
+## Swift Boots and the Agility shop upgrade multiply this.
 @export_range(100.0, 600.0, 5.0) var player_speed: float = 280.0
 
 @export_group("Player Damage")
@@ -87,8 +87,14 @@ extends Resource
 ## the hero's base weapon damage per pick (0.15 = +3 on a 20-damage weapon).
 @export_range(0.05, 1.0, 0.05) var damage_pick_bonus: float = 0.15
 ## Starting-weapon speed level-up ("Battle Rhythm" etc.): attacks this much
-## faster per pick (0.15 = 15% shorter wait between attacks).
-@export_range(0.05, 0.5, 0.05) var fire_rate_pick: float = 0.15
+## faster per pick (0.1 = 10% shorter wait between attacks).
+@export_range(0.01, 0.5, 0.01) var fire_rate_pick: float = 0.1
+## Melee reach level-up ("Wide Swing", "Long Haft"): +this much reach per pick.
+@export_range(0.01, 0.5, 0.01) var reach_pick: float = 0.08
+## Projectile speed level-up ("Blazing Bolts", "Strong Bow"): +this much per pick.
+@export_range(0.01, 0.5, 0.01) var projectile_speed_pick: float = 0.2
+## Swift Boots level-up: +this much move speed per pick.
+@export_range(0.01, 0.5, 0.01) var move_speed_pick: float = 0.08
 
 @export_group("Level-Up Choices")
 ## Most additional weapons per run (spells and level-up weapons), on top of
@@ -97,8 +103,8 @@ extends Resource
 @export_range(1, 7) var max_extra_weapons: int = 3
 ## Keen Eye level-up: chance per pick that a main-weapon attack is a critical
 ## hit, up to Crit Max; crits deal Crit Multiplier times the damage.
-@export_range(0.01, 0.25, 0.01) var crit_chance_per_pick: float = 0.05
-@export_range(0.05, 1.0, 0.05) var crit_max: float = 0.4
+@export_range(0.01, 0.25, 0.01) var crit_chance_per_pick: float = 0.03
+@export_range(0.05, 1.0, 0.05) var crit_max: float = 0.25
 @export_range(1.25, 4.0, 0.25) var crit_multiplier: float = 2.0
 
 @export_group("Level-Up Weapons")

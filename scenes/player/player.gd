@@ -370,11 +370,11 @@ func apply_upgrade(id: String) -> void:
 		"fire_rate":
 			fire_cooldown *= 1.0 - BALANCE.fire_rate_pick
 		"move_speed":
-			move_speed *= 1.15
+			move_speed *= 1.0 + BALANCE.move_speed_pick
 		"projectile_speed":
-			weapon_speed *= 1.3
+			weapon_speed *= 1.0 + BALANCE.projectile_speed_pick
 		"reach":
-			weapon_reach *= 1.15
+			weapon_reach *= 1.0 + BALANCE.reach_pick
 		"unlock_lightning":
 			add_child(LIGHTNING_SCENE.instantiate())
 		"unlock_frost":
