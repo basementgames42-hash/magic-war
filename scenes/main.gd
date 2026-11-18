@@ -260,7 +260,8 @@ func win_level() -> void:
 			stats, true)
 
 func _on_player_died() -> void:
-	if revives_left > 0 and Ads.is_available():
+	# revives_left below 0 = unlimited (BALANCE.revives_per_run = -1).
+	if revives_left != 0 and Ads.is_available():
 		get_tree().paused = true
 		revive_offer.visible = true
 	else:
@@ -271,7 +272,8 @@ func _on_revive_accepted() -> void:
 
 func _on_revive_ad_finished(rewarded: bool) -> void:
 	if rewarded:
-		revives_left -= 1
+		if revives_left > 0:
+			revives_left -= 1
 		get_tree().paused = false
 		player.revive()
 	else:
