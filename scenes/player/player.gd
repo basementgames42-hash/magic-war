@@ -342,6 +342,16 @@ const LEVEL_WEAPONS: Dictionary = {
 
 var weapon_nodes: Dictionary = {}   # Weapon id -> its node, once unlocked
 
+const EPIC_COMBO = preload("res://scenes/spells/epic_combo.gd")
+var epic_combos: Array[String] = []  # Epic Combo ids gained this run
+
+func add_epic(id: String) -> void:
+	# An Epic Combo ability (see epic_combo.gd); the two weapons keep working.
+	var combo: Node2D = EPIC_COMBO.new()
+	combo.id = id
+	add_child(combo)
+	epic_combos.append(id)
+
 func weapon_level(id: String) -> int:
 	return weapon_nodes[id].level if weapon_nodes.has(id) else 0
 

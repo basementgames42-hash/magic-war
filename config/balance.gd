@@ -103,9 +103,19 @@ extends Resource
 @export_range(1, 7) var max_extra_weapons: int = 3
 ## Keen Eye level-up: chance per pick that a main-weapon attack is a critical
 ## hit, up to Crit Max; crits deal Crit Multiplier times the damage.
-@export_range(0.01, 0.25, 0.01) var crit_chance_per_pick: float = 0.03
+@export_range(0.0005, 0.25, 0.0005) var crit_chance_per_pick: float = 0.0025
 @export_range(0.05, 1.0, 0.05) var crit_max: float = 0.25
 @export_range(1.25, 4.0, 0.25) var crit_multiplier: float = 2.0
+## Epic Combos (purple level-up choices made from two of the run's
+## additional weapons): only offered once the player is past this level...
+@export_range(0, 50) var epic_min_level: int = 0
+## ...at most this many per run...
+@export_range(1, 3) var max_epics: int = 2
+## ...and on this share of level-ups (when there's a pair not yet combined),
+## so a run may get both, one or none.
+@export_range(0.05, 1.0, 0.05) var epic_offer_chance: float = 0.35
+## Multiplies every Epic Combo's damage.
+@export_range(0.25, 4.0, 0.05) var epic_damage_scale: float = 1.0
 
 @export_group("Level-Up Weapons")
 ## Highest level for Runeward Circle, Starfall, Moonreaver and Thornwake.
