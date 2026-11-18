@@ -14,6 +14,8 @@ extends RefCounted
 #   health/damage/spawn - difficulty of the map, on top of wave + player level
 #   landmarks     - hand-placed scenery as [kind, x, y]. Empty = keep the
 #                   props placed by hand in world.tscn.
+#   boss          - name of the map's boss: a giant version of its last enemy
+#                   type that arrives in the final minute (main.gd)
 #
 # Enemy keys:
 #   name, run, attack - folder and sheet suffixes in the Enemy Pack
@@ -25,6 +27,7 @@ const ENEMY_PACK_DIR: String = "res://scenes/assets/Tiny Swords (Enemy Pack)/Tin
 const MAPS: Array[Dictionary] = [
 	{
 		"name": "Greenhollow Vale",
+		"boss": "Mossback the Lizard Brute",
 		"blurb": "Farmland under siege. The bones are only the start.",
 		"ground": Color(0.55, 0.6, 0.4),
 		"buildings": "Blue",
@@ -45,6 +48,7 @@ const MAPS: Array[Dictionary] = [
 	},
 	{
 		"name": "Emberwaste",
+		"boss": "Ashpelt the Ember Bear",
 		"blurb": "Scorched badlands held by goblin raiders.",
 		"ground": Color(1.75, 0.8, 0.42),
 		"buildings": "Red",
@@ -74,6 +78,7 @@ const MAPS: Array[Dictionary] = [
 	},
 	{
 		"name": "Tidewrack Fen",
+		"boss": "Ironshell, Tyrant of the Tides",
 		"blurb": "A drowned marsh where the sea came ashore armed.",
 		"ground": Color(0.42, 0.95, 1.05),
 		"buildings": "Yellow",
@@ -103,6 +108,7 @@ const MAPS: Array[Dictionary] = [
 	},
 	{
 		"name": "Hexfall Barrens",
+		"boss": "Hexhorn the Cursed Minotaur",
 		"blurb": "Cursed ground. Nothing here walks a straight line.",
 		"ground": Color(0.95, 0.42, 1.0),
 		"buildings": "Black",
@@ -140,6 +146,7 @@ static func ranged_test() -> Dictionary:
 	var test: Dictionary = MAPS[1].duplicate()  # Emberwaste's look and scenery
 	test["name"] = "Ranged Test"
 	test["blurb"] = "Nothing but throwers, bombers and casters."
+	test["boss"] = "Malhex the Grand Hex Shaman"
 	test["health"] = 1.0
 	test["damage"] = 0.0
 	test["spawn"] = 1.0

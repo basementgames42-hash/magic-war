@@ -157,12 +157,39 @@ extends Resource
 ## Elite health at the start of a run (+20 per minute, +15% per wave).
 @export_range(1, 500) var elite_health: int = 60
 
+@export_group("Boss")
+## Regular maps: the boss (a giant version of the map's last enemy type)
+## arrives when this many seconds are left on the clock. At 0:00 the clock
+## shows BOSS and the map only clears once it's dead.
+@export_range(10.0, 240.0, 5.0) var boss_arrives_seconds_left: float = 60.0
+## Boss health on the first map; harder maps multiply it (config/levels.gd),
+## and it gains Boss Health Per Player Level for each level above 1.
+@export_range(100, 20000, 50) var boss_health: int = 1200
+@export_range(0.0, 0.2, 0.01) var boss_health_per_player_level: float = 0.05
+## Damage of one boss hit, before the usual multipliers.
+@export_range(1, 30) var boss_damage: int = 4
+## Boss size compared with a normal enemy (elites are 2.5).
+@export_range(1.0, 4.0, 0.05) var boss_scale: float = 1.75
+## A nuke hits the boss for this share of its max health instead of killing it.
+@export_range(0.0, 1.0, 0.05) var boss_nuke_share: float = 0.2
+## Coins and XP orbs the boss drops.
+@export_range(0, 500) var boss_coins: int = 60
+@export_range(0, 200) var boss_xp: int = 40
+
 @export_group("Coin Drops")
 ## Coins a normal enemy drops when it dies. Each coin is worth 1 gold,
 ## plus the Greed shop bonus (+25% per level).
 @export_range(0, 20) var coins_per_enemy: int = 1
 ## Coins an elite (giant) enemy drops when it dies.
 @export_range(0, 100) var coins_per_elite: int = 15
+
+@export_group("Shop Prices")
+## Price of an upgrade's first level; each level costs this times the level
+## (30, 60, 90 ... 300 at max). Was 10.
+@export_range(1, 500) var upgrade_base_cost: int = 30
+## The Luck upgrades (second tier) and the third tier cost this much more.
+@export_range(1.0, 5.0, 0.1) var upgrade_tier2_cost: float = 1.5
+@export_range(1.0, 5.0, 0.1) var upgrade_tier3_cost: float = 2.0
 
 @export_group("Shop Upgrades")
 ## Max HP per Vitality level.

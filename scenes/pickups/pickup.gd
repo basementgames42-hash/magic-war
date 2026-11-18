@@ -15,6 +15,7 @@ const ICONS: Dictionary = {
 }
 
 const SOUNDS: Dictionary = {"health": "heal", "magnet": "magnet", "nuke": "nuke", "invincible": "level_up"}
+const BALANCE: Balance = preload("res://config/balance.tres")
 
 @export var kind: String = "health"
 @export var heal_amount: int = 3
@@ -48,5 +49,9 @@ func _on_body_entered(body: Node2D) -> void:
 func nuke() -> void:
 	# Every enemy on the map, on screen or not.
 	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if enemy.is_boss:
+			# A boss survives a nuke: it takes a big chunk instead.
+			enemy.take_damage(roundi(enemy.max_health * BALANCE.boss_nuke_share))
+			continue
 		# false = no pickup roll, or one nuke would shower the map in drops.
 		enemy.die(false)

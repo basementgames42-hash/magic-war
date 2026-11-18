@@ -33,6 +33,7 @@ var active_boost: String = ""   # Ad boost running now: "gold", "xp", "drops" or
 var shop_from_run: bool = false # Upgrade shop opened from the game-over screen (Back = carry on)
 var shop_back_text: String = "Play Again"  # What the shop's Back says then ("Next Level" after a win)
 var map_to_celebrate: int = -1  # Map just unlocked, whose padlock breaks on map select (saved)
+var upgrade_spent: int = 0      # Coins actually paid for upgrades so far: Reset refunds this (saved)
 var show_damage_numbers: bool = false  # Settings menu toggle (saved), both modes
 
 # Meta upgrade levels the player has purchased. Keys must match
@@ -115,9 +116,20 @@ func add_coins(amount: int) -> void:
 	run_coins += gained
 	run_coins_changed.emit(run_coins)
 
+# The Luck upgrades (second tier) and the third tier cost more than the
+# four the shop starts with.
+const TIER_2: Array[String] = ["potion_drop", "nuke_drop", "invincible_drop", "magnet_drop"]
+const TIER_3: Array[String] = ["regen", "fire_rate", "dodge", "pickup_range"]
+
 func get_upgrade_cost(id: String) -> int:
-	# Escalating prices: level 0->1 costs 10, 1->2 costs 20, etc.
-	return 10 * (meta_upgrades[id] + 1)
+	# Escalating prices: level 0->1 costs the base, 1->2 twice it, and so on
+	# (30, 60, 90 ... 300 with the default base), times the tier's multiplier.
+	var tier: float = 1.0
+	if id in TIER_3:
+		tier = BALANCE.upgrade_tier3_cost
+	elif id in TIER_2:
+		tier = BALANCE.upgrade_tier2_cost
+	return roundi(BALANCE.upgrade_base_cost * (meta_upgrades[id] + 1) * tier)
 
 func is_maxed(id: String) -> bool:
 	return meta_upgrades[id] >= MAX_UPGRADE_LEVEL
@@ -127,15 +139,22 @@ func try_purchase(id: String) -> bool:
 	if coins < cost or is_maxed(id):
 		return false
 	coins -= cost
+	upgrade_spent += cost
 	meta_upgrades[id] += 1
 	save_game()
 	return true
 
 func spent_on_upgrades() -> int:
-	# Level L cost 10 + 20 + ... + 10L = 5 * L * (L + 1) in total.
+	# What was really paid, so Reset Upgrades refunds exactly that, whatever
+	# the prices are now.
+	return upgrade_spent
+
+static func old_price_total(levels: Dictionary) -> int:
+	# Saves from before purchases were tracked: everything was bought at the
+	# old prices (10, 20, ... 10L), which come to 5 * L * (L + 1) per upgrade.
 	var total: int = 0
-	for id in meta_upgrades:
-		var level: int = meta_upgrades[id]
+	for id in levels:
+		var level: int = levels[id]
 		total += 5 * level * (level + 1)
 	return total
 
@@ -144,6 +163,7 @@ func reset_upgrades() -> int:
 	# on them refunded. Returns the refund.
 	var refund: int = spent_on_upgrades()
 	coins += refund
+	upgrade_spent = 0
 	for id in meta_upgrades:
 		meta_upgrades[id] = 0
 	save_game()
@@ -160,6 +180,7 @@ func save_game() -> void:
 		"new_unlocks": new_unlocks,
 		"show_damage_numbers": show_damage_numbers,
 		"map_to_celebrate": map_to_celebrate,
+		"upgrade_spent": upgrade_spent,
 	}
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	file.store_string(JSON.stringify(data))
@@ -192,3 +213,4 @@ func load_game() -> void:
 	for key in meta_upgrades.keys():
 		if saved.has(key):
 			meta_upgrades[key] = mini(int(saved[key]), MAX_UPGRADE_LEVEL)
+	upgrade_spent = int(data.get("upgrade_spent", old_price_total(meta_upgrades)))

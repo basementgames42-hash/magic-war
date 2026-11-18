@@ -46,7 +46,9 @@ const KINDS: Dictionary = {
 	"sheep": ["Terrain/Resources/Meat/Sheep/Sheep_Idle.png", 6, 84, Vector2.ZERO],
 	"sheep_grazing": ["Terrain/Resources/Meat/Sheep/Sheep_Grass.png", 12, 84, Vector2.ZERO],
 	"dead_tree": [EXTRA + "Dead Tree/Dead Tree.png", 1, 290, Vector2(130, 60)],
-	"goblin_hut": [EXTRA + "Goblin Hut/Goblin Hut.png", 12, 241, Vector2(130, 60)],
+	# 16 frames of 192px (smoke puffing from the chimney). Cutting it into 12
+	# made each frame straddle two huts, so the hut slid about as it animated.
+	"goblin_hut": [EXTRA + "Goblin Hut/Goblin Hut.png", 16, 241, Vector2(130, 60)],
 	"fish_hut": [EXTRA + "Fish Hut/Fish Hut.png", 8, 179, Vector2(110, 50)],
 	"pirate_tower": [EXTRA + "Pirate Tower/Pirate Tower_Ground.png", 1, 179, Vector2(84, 46)],
 	"gnome_hut": [EXTRA + "Gnome Buildings/Gnome Hut.png", 1, 148, Vector2(80, 40)],

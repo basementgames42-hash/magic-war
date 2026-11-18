@@ -371,6 +371,85 @@ def loading_music():
     return finish(wrap_loop(mix, loop_len), 0.75)
 
 
+def boss_music():
+    """Boss fight loop: urgent and heavy. 156 BPM, 16 bars (~25 s). Pounding
+    drums, a low brass ostinato, a screaming lead in the second half. Same
+    D minor as the rest, with a darker Eb (Phrygian) for menace."""
+    bpm = 156
+    beat = 60.0 / bpm
+    bar = beat * 4
+    EB = [51, 55, 58]
+    chords = [DM, EB, DM, C, DM, EB, BB, A]
+    lead = [
+        [(0, 1, 74), (1, 1, 75), (2, 2, 74)],
+        [(0, .5, 75), (.5, .5, 74), (1, 1, 72), (2, 2, 70)],
+        [(0, 1, 74), (1, 1, 77), (2, 1, 81), (3, 1, 79)],
+        [(0, 2, 76), (2, 2, 72)],
+        [(0, 1, 81), (1, 1, 82), (2, 2, 81)],
+        [(0, .5, 82), (.5, .5, 81), (1, 1, 79), (2, 2, 75)],
+        [(0, 1, 77), (1, 1, 74), (2, 1, 70), (3, 1, 74)],
+        [(0, 3, 73), (3, 1, 76)],
+    ]
+    drums, bass, brass, top = [], [], [], []
+    for b in range(16):
+        t0 = b * bar
+        chord = chords[b % 8]
+        full = b >= 8
+        root = chord[0] - 12
+        # Drums: double-kick gallop, snare on 2 and 4, toms every 4th bar.
+        for k in [0, 0.5, 1.5, 2, 2.5, 3.5]:
+            mix_into(drums, kick(1.0), t0 + k * beat)
+        for s in (1, 3):
+            mix_into(drums, snare(1.0), t0 + s * beat)
+        for h in range(8):
+            mix_into(drums, hat(0.7, open_=full and h % 4 == 3), t0 + h * beat * 0.5)
+        if b % 4 == 3:
+            for j, n in enumerate([50, 48, 45, 43, 41, 38]):
+                mix_into(drums, tom(n, 0.95), t0 + (2.5 + j * 0.25) * beat)
+        # Bass: driving eighths on the root.
+        for i in range(8):
+            f = midi(root - 12 + (12 if i % 4 == 3 else 0))
+            note = tone(f, beat * 0.5, "saw", 0.7, decay=0.1, sustain=0.5, release=0.02)
+            mix_into(bass, note, t0 + i * beat * 0.5)
+        # Brass ostinato: stabbed chords on the off-beats.
+        for k in (0, 1.5, 3):
+            for n in chord:
+                mix_into(brass, tone(midi(n), beat * 0.45, "saw", 0.35, attack=0.01, decay=0.15,
+                                     sustain=0.4, release=0.05), t0 + k * beat)
+        # Lead: only in the second half.
+        if full:
+            for (start, length, n) in lead[b % 8]:
+                dur = length * beat * 0.95
+                note = tone(midi(n), dur, "square", 0.5, attack=0.01, decay=0.2, sustain=0.7,
+                            release=0.05, vibrato=0.008, duty=0.3)
+                mix_into(note, tone(midi(n - 12), dur, "saw", 0.35, attack=0.01, release=0.05))
+                mix_into(top, note, t0 + start * beat)
+    loop_len = 16 * bar
+    bass = lowpass(bass, 700)
+    brass = lowpass(brass, 2200)
+    top = echo(lowpass(top, 3600), beat * 0.75, 0.25, 0.25)
+    mix = []
+    for part, gain in ((drums, 0.42), (bass, 0.3), (brass, 0.16), (top, 0.18)):
+        mix_into(mix, part, 0, gain)
+    mix = room(mix, 0.2)
+    return finish(wrap_loop(mix, loop_len), 0.82)
+
+
+def sfx_boss_warning():
+    """'BOSS INCOMING': two war-horn blasts over a drum hit and a low rumble."""
+    out = []
+    for i, (n, dur) in enumerate([(50, 0.55), (53, 0.9)]):
+        t = i * 0.62
+        horn = tone(midi(n), dur, "saw", 0.6, attack=0.05, decay=0.3, sustain=0.7, release=0.2,
+                    vibrato=0.006)
+        mix_into(horn, tone(midi(n - 12), dur, "tri", 0.6, attack=0.05, release=0.2))
+        mix_into(out, lowpass(horn, 1400), t)
+        mix_into(out, tom(38, 1.0), t)
+        mix_into(out, kick(1.0), t)
+    mix_into(out, lowpass(noise(1.6, 0.5, decay=1.2), 300), 0)
+    return finish(room(out, 0.4))
+
+
 def jingle(notes, step, shape, final_chord, final_len, room_wet=0.3):
     """Short melody then a held chord (victory / defeat stingers)."""
     out = []
@@ -499,10 +578,16 @@ def sfx_ui_click():
 
 if __name__ == "__main__":
     import sys
-    # "python tools/generate_audio.py loading" writes just that one track,
-    # leaving every other file untouched.
-    if len(sys.argv) > 1 and sys.argv[1] == "loading":
-        write_wav(os.path.join(OUT, "music", "loading.wav"), loading_music(), loop=True)
+    # Newer sounds can be written on their own, leaving every other file
+    # untouched:  python tools/generate_audio.py loading boss boss_warning
+    singles = {
+        "loading": lambda: write_wav(os.path.join(OUT, "music", "loading.wav"), loading_music(), loop=True),
+        "boss": lambda: write_wav(os.path.join(OUT, "music", "boss.wav"), boss_music(), loop=True),
+        "boss_warning": lambda: write_wav(os.path.join(OUT, "sfx", "boss_warning.wav"), sfx_boss_warning()),
+    }
+    if len(sys.argv) > 1:
+        for name in sys.argv[1:]:
+            singles[name]()
         sys.exit()
     sfx = {
         "fireball_cast": sfx_fireball_cast, "fireball_hit": sfx_fireball_hit,
@@ -519,4 +604,5 @@ if __name__ == "__main__":
               jingle([69, 67, 65, 64], 0.32, "tri", [50, 53, 57], 1.8, 0.4))
     write_wav(os.path.join(OUT, "music", "title.wav"), title_music(), loop=True)
     write_wav(os.path.join(OUT, "music", "battle.wav"), battle_music(), loop=True)
-    write_wav(os.path.join(OUT, "music", "loading.wav"), loading_music(), loop=True)
+    for name in singles:
+        singles[name]()

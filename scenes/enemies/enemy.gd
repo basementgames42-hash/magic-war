@@ -46,11 +46,13 @@ var health: int
 var player: Node2D = null
 var speed_multiplier: float = 1.0  # Below 1 while slowed (Frost Nova)
 var slow_timer: float = 0.0        # Seconds of slow left
+var frozen_timer: float = 0.0      # Seconds of the blue Frost Nova tint left
 const SLOW_TINT := Color(0.45, 0.7, 1.0)  # Frozen-blue body while slowed
 var attack_timer: float = 0.0
 # Set by Main before add_child to swap the look. Needs "run" and "attack"
 # animations. Left null = the skeleton frames baked into the scene.
 var custom_frames: SpriteFrames = null
+var is_boss: bool = false  # The map's final boss (set by Main): glows, shrugs off nukes
 # Obstacle avoidance: the wall we're touching (its surface normal) and
 # which way (+1/-1) we've decided to walk around it.
 var wall_normal: Vector2 = Vector2.ZERO
@@ -86,6 +88,14 @@ func _ready() -> void:
 	if custom_frames != null:
 		anim.sprite_frames = custom_frames
 	health = max_health
+	if is_boss:
+		# A pulsing red-gold glow behind the boss, so it reads as one at a glance.
+		var glow: Sprite2D = FX.glow_sprite(Color(1.0, 0.45, 0.15, 0.85), 150.0)
+		add_child(glow)
+		move_child(glow, 0)
+		var pulse := glow.create_tween().set_loops()
+		pulse.tween_property(glow, "scale", glow.scale * 1.25, 0.6).set_trans(Tween.TRANS_SINE)
+		pulse.tween_property(glow, "scale", glow.scale, 0.6).set_trans(Tween.TRANS_SINE)
 	player = get_tree().get_first_node_in_group("player")
 	if player != null:
 		# scale: elites are scaled up 2.5x (see main.gd).
@@ -106,6 +116,9 @@ func _physics_process(delta: float) -> void:
 		slow_timer -= delta
 		if slow_timer <= 0.0:
 			speed_multiplier = 1.0
+	if frozen_timer > 0.0:
+		frozen_timer -= delta
+		if frozen_timer <= 0.0:
 			anim.modulate = Color.WHITE
 	speed_factor = 1.0
 	can_bite = true
@@ -529,14 +542,17 @@ func take_damage(amount: int) -> void:
 		die()
 
 func body_tint() -> Color:
-	return SLOW_TINT if slow_timer > 0.0 else Color.WHITE
+	return SLOW_TINT if frozen_timer > 0.0 else Color.WHITE
 
-func apply_slow(factor: float, duration: float) -> void:
-	# Slowed and tinted blue until the timer runs out (_physics_process puts
-	# both back). A second slow refreshes the timer and keeps the stronger one.
+func apply_slow(factor: float, duration: float, frozen: bool = true) -> void:
+	# Slowed until the timer runs out (_physics_process puts it back). A
+	# second slow refreshes the timer and keeps the stronger one. frozen =
+	# also tinted blue (Frost Nova); thorns slow without the ice look.
 	speed_multiplier = minf(speed_multiplier, factor) if slow_timer > 0.0 else factor
 	slow_timer = maxf(slow_timer, duration)
-	anim.modulate = SLOW_TINT
+	if frozen:
+		frozen_timer = maxf(frozen_timer, duration)
+		anim.modulate = SLOW_TINT
 
 func drop_chances() -> Dictionary:
 	# Luck shop upgrades raise every enemy's chance for their pickup, and the

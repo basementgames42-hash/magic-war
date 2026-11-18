@@ -1,12 +1,14 @@
 extends Node2D
-# Main: spawns enemies (harder over time), runs the clock, spawns elites,
-# triggers win/lose screens.
+# Main: spawns enemies (harder over time), runs the clock, spawns elites
+# and (on a map) the final boss, triggers win/lose screens.
 
 const ENEMY_SCENE: PackedScene = preload("res://scenes/enemies/enemy.tscn")
 const BALANCE: Balance = preload("res://config/balance.tres")
 const REVIVE_OFFER = preload("res://scenes/ui/revive_offer.gd")
 const BOOST_OFFER = preload("res://scenes/ui/boost_offer.gd")
 const UNLOCK_TOAST = preload("res://scenes/ui/unlock_toast.gd")
+const BOSS_HUD = preload("res://scenes/ui/boss_hud.gd")
+const FX = preload("res://scenes/spells/spell_fx.gd")
 
 @export var spawn_distance: float = 800.0
 @export var elite_interval: float = 60.0    # An elite every minute
@@ -33,6 +35,12 @@ var revives_left: int = BALANCE.revives_per_run
 var revive_offer: CanvasLayer
 var map_stage: int = 0                      # Endless: how many maps it has moved on
 var morph_wait: float = 0.0                 # Endless: seconds until the next World.morph
+# The map's final boss: arrives with BALANCE.boss_arrives_seconds_left to go;
+# the map only clears once the clock is out AND the boss is dead.
+var boss: CharacterBody2D = null
+var boss_spawned: bool = false
+var boss_down: bool = false
+var boss_hud: Control
 
 func _ready() -> void:
 	endless = GameData.endless
@@ -46,6 +54,8 @@ func _ready() -> void:
 	revive_offer.declined.connect(finish_run)
 	add_child(revive_offer)
 	$HUD.add_child(BOOST_OFFER.new())
+	boss_hud = BOSS_HUD.new()
+	$HUD.add_child(boss_hud)
 	WindowControls.layout_changed.connect(fit_hud)
 	fit_hud()
 	show_map_banner()
@@ -85,10 +95,15 @@ func _process(delta: float) -> void:
 	elapsed += delta
 	update_clock()  # First, so a win leaves the countdown on 00:00
 
-	# Survived the full run: victory. (Endless has no finish line.)
-	if not endless and elapsed >= BALANCE.win_time_minutes * 60.0:
-		win_level()
-		return
+	if not endless:
+		var left: float = BALANCE.win_time_minutes * 60.0 - elapsed
+		if not boss_spawned and left <= BALANCE.boss_arrives_seconds_left:
+			spawn_boss()
+		# Clock out and boss dead: victory. With the boss still up, play on
+		# (the clock reads BOSS) until it falls. (Endless has no finish line.)
+		if left <= 0.0 and boss_down:
+			win_level()
+			return
 
 	# Difficulty ramp: spawn faster as time passes. 1.0s at start, floor of
 	# 0.25s (reached at ~2.5 min). Harder maps and a stronger player both
@@ -125,7 +140,7 @@ func update_clock() -> void:
 		clock.text = format_time(elapsed)
 		return
 	var left: float = maxf(BALANCE.win_time_minutes * 60.0 - elapsed, 0.0)
-	clock.text = format_time(ceilf(left))
+	clock.text = "BOSS" if left <= 0.0 and boss_spawned and not boss_down else format_time(ceilf(left))
 	var final: bool = left <= 10.0
 	clock.modulate = Color(1.0, 0.45, 0.4) if final else Color.WHITE
 	clock.pivot_offset = clock.size / 2.0
@@ -238,10 +253,11 @@ func win_level() -> void:
 		$GameOverScreen.open("TEST COMPLETE", "You survived %s." % map["name"], stats, true)
 	elif index + 1 < Levels.MAPS.size():
 		stats["next_level"] = index + 1
-		$GameOverScreen.open("VICTORY!", "%s is yours. %s awaits." % [map["name"],
+		$GameOverScreen.open("VICTORY!", "%s has fallen. %s awaits." % [boss_name(),
 			Levels.MAPS[index + 1]["name"]], stats, true)
 	else:
-		$GameOverScreen.open("VICTORY!", "You ended the Magic War.", stats, true)
+		$GameOverScreen.open("VICTORY!", "%s has fallen. You ended the Magic War." % boss_name(),
+			stats, true)
 
 func _on_player_died() -> void:
 	if revives_left > 0 and Ads.is_available():
@@ -292,6 +308,48 @@ func _on_run_coins_changed(amount: int) -> void:
 func _on_enemy_killed() -> void:
 	kills += 1
 	$HUD/GoldCounter/KillLabel.text = str(kills)
+
+func boss_name() -> String:
+	return map.get("boss", "The Warlord")
+
+func spawn_boss() -> void:
+	# A giant version of the map's last enemy type, with its own brain, a
+	# name, a health bar, boss music and a "BOSS INCOMING" announcement.
+	boss_spawned = true
+	var final_type: Dictionary = enemy_order.back()
+	var spawning: Dictionary = enemy_type
+	enemy_type = final_type  # make_enemy() builds whatever enemy_type is
+	boss = make_enemy()
+	enemy_type = spawning
+	boss.is_boss = true
+	boss.max_health = roundi(BALANCE.boss_health * map["health"]
+		* (1.0 + levels_gained() * BALANCE.boss_health_per_player_level))
+	boss.move_speed = BALANCE.enemy_speed * final_type["speed"] * enemy_speed_scale()
+	boss.contact_damage = BALANCE.boss_damage
+	boss.coin_drop = BALANCE.boss_coins
+	boss.xp_drop = BALANCE.boss_xp
+	# Same big-sheet correction as elites, so a minotaur boss isn't enormous.
+	var frame_height: float = boss.custom_frames.get_frame_texture(&"run", 0).get_height()
+	boss.scale = Vector2.ONE * BALANCE.boss_scale * minf(192.0 / frame_height, 1.0)
+	boss.killed.connect(_on_boss_killed)
+	add_child(boss)
+	boss_hud.announce(boss_name(), boss)
+	Audio.play("boss_warning", 0.0, 0.0)
+	Audio.play_music("boss")
+
+func _on_boss_killed() -> void:
+	boss_down = true
+	boss_hud.defeated()
+	for color in [Color(1.0, 0.85, 0.35), Color(1.0, 0.4, 0.15), Color.WHITE]:
+		FX.burst(self, boss.global_position, color, 30, 520.0, 0.9, 0.6)
+	Audio.play("nuke", -2.0, 0.0)
+	if BALANCE.win_time_minutes * 60.0 - elapsed > 0.0:
+		Audio.play_music("battle")  # Time still left: back to the battle tune
+		return
+	# Slain after the clock ran out: a moment to enjoy it, then victory.
+	get_tree().create_timer(1.4, false).timeout.connect(func():
+		if not run_over:
+			win_level())
 
 func run_stats() -> Dictionary:
 	# Everything the game-over recap shows.
