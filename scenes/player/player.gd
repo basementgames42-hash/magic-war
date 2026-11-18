@@ -183,6 +183,7 @@ const THRUST = preload("res://scenes/spells/lance_thrust.gd")
 
 var fire_cooldown: float  # From the character; upgrades shorten it
 var weapon_damage: int    # From the character's Balance entry; upgrades add to it
+var crit_chance: float = 0.0  # Keen Eye level-ups: chance a main-weapon attack crits
 var weapon_speed: float   # Projectile speed; upgrades raise it
 var weapon_reach: float   # Melee reach; 0 = a projectile, fires at any range
 
@@ -241,7 +242,9 @@ func fire_at(target: Node2D) -> void:
 			shot.reach = weapon_reach
 	shot.global_position = global_position
 	shot.direction = aim
-	shot.damage = weapon_damage
+	# Keen Eye: some attacks are critical hits, for double (BALANCE) damage.
+	var crit: bool = randf() < crit_chance
+	shot.damage = roundi(weapon_damage * BALANCE.crit_multiplier) if crit else weapon_damage
 	get_parent().add_child(shot)
 
 # ---------- SUPER MODE (invincibility pickup) ----------
@@ -362,6 +365,8 @@ func apply_upgrade(id: String) -> void:
 	match id:
 		"damage":
 			weapon_damage += damage_pick()
+		"crit":
+			crit_chance = minf(crit_chance + BALANCE.crit_chance_per_pick, BALANCE.crit_max)
 		"fire_rate":
 			fire_cooldown *= 1.0 - BALANCE.fire_rate_pick
 		"move_speed":

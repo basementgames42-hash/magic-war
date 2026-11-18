@@ -90,6 +90,17 @@ extends Resource
 ## faster per pick (0.15 = 15% shorter wait between attacks).
 @export_range(0.05, 0.5, 0.05) var fire_rate_pick: float = 0.15
 
+@export_group("Level-Up Choices")
+## Most additional weapons per run (spells and level-up weapons), on top of
+## the hero's own. Once reached, no new weapons are offered; upgrades to the
+## ones you have still are.
+@export_range(1, 7) var max_extra_weapons: int = 3
+## Keen Eye level-up: chance per pick that a main-weapon attack is a critical
+## hit, up to Crit Max; crits deal Crit Multiplier times the damage.
+@export_range(0.01, 0.25, 0.01) var crit_chance_per_pick: float = 0.05
+@export_range(0.05, 1.0, 0.05) var crit_max: float = 0.4
+@export_range(1.25, 4.0, 0.25) var crit_multiplier: float = 2.0
+
 @export_group("Level-Up Weapons")
 ## Highest level for Runeward Circle, Starfall, Moonreaver and Thornwake.
 @export_range(1, 10) var weapon_max_level: int = 5
