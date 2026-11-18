@@ -171,7 +171,7 @@ extends Resource
 ## Boss size compared with a normal enemy (elites are 2.5).
 @export_range(1.0, 4.0, 0.05) var boss_scale: float = 1.75
 ## A nuke hits the boss for this share of its max health instead of killing it.
-@export_range(0.0, 1.0, 0.05) var boss_nuke_share: float = 0.2
+@export_range(0.0, 1.0, 0.05) var boss_nuke_share: float = 0.1
 ## Coins and XP orbs the boss drops.
 @export_range(0, 500) var boss_coins: int = 60
 @export_range(0, 200) var boss_xp: int = 40
