@@ -44,7 +44,7 @@ const INFUSIONS: Dictionary = {
 	"frost": ["Frost", "freezes"],
 	"orbit": ["Void", "echoes with an arcane blast"],
 	"runeward": ["Rune", "leaves a rune that detonates"],
-	"starfall": ["Star", "can call down a star"],
+	"starfall": ["Star", "has a chance to call down a star"],
 	"moonreaver": ["Moon", "releases a crescent slash"],
 	"thornwake": ["Thorn", "sprouts brambles"],
 }

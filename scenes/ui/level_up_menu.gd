@@ -108,7 +108,7 @@ func open() -> void:
 		buttons[i].autowrap_mode = TextServer.AUTOWRAP_WORD_SMART \
 			if WindowControls.is_narrow() or god else TextServer.AUTOWRAP_OFF
 		# God-Tier buttons are wider, so their text stays at about two lines.
-		buttons[i].custom_minimum_size.x = (560.0 if WindowControls.is_narrow() else 780.0) \
+		buttons[i].custom_minimum_size.x = (520.0 if WindowControls.is_narrow() else 780.0) \
 			if god else 460.0
 
 	visible = true
