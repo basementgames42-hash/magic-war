@@ -18,7 +18,7 @@ extends Resource
 @export_range(0.5, 30.0, 0.5) var endless_map_minutes: float = 2.0
 ## Minutes the drift into the next map takes: the ground and foliage colours
 ## blend, and buildings, trees and rocks change a few at a time while off-screen.
-@export_range(0.1, 10.0, 0.1) var endless_blend_minutes: float = 1.0
+@export_range(0.1, 10.0, 0.1) var endless_blend_minutes: float = 0.5
 
 @export_group("Difficulty Scaling")
 ## Extra enemy health per player level above 1 (0.08 = +8% each level).

@@ -39,6 +39,13 @@ const LEADS: Dictionary = {
 	"moonreaver": ["Eclipse Reaper", "An eclipse scythe sweeps all around you, then crescents spiral out"],
 	"thornwake": ["Wrath of the Wildwood", "Giant thorn vines erupt outward in every direction"],
 }
+# Lead -> damage multiplier for everything this God-Tier deals (its attack and
+# its infusions), so the seven leads hit about equally hard against a crowd.
+# Eternal Winter sits a little lower because its blizzard also slows everyone.
+const LEAD_POWER: Dictionary = {
+	"lightning": 1.2, "frost": 1.5, "orbit": 1.3, "runeward": 0.8,
+	"starfall": 0.65, "moonreaver": 1.3, "thornwake": 0.84,
+}
 const INFUSIONS: Dictionary = {
 	"lightning": ["Storm", "chains lightning"],
 	"frost": ["Frost", "freezes"],
@@ -141,7 +148,7 @@ func power(amount: float) -> int:
 	# past the one it unlocks at, so it stays worth having in a long run.
 	var level: int = get_parent().level if get_parent() else BALANCE.god_min_level
 	var growth: float = 1.0 + BALANCE.god_damage_per_level * maxi(level - BALANCE.god_min_level, 0)
-	return maxi(roundi(amount * BALANCE.god_damage_scale * growth), 1)
+	return maxi(roundi(amount * LEAD_POWER.get(lead, 1.0) * BALANCE.god_damage_scale * growth), 1)
 
 func smite(e, amount: float) -> void:
 	# A main-attack hit: damage, then every infusion's effect on it.
