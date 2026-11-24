@@ -58,7 +58,7 @@ var upgrade_pool: Array = [
 	{"name": "Moonreaver", "desc": "NEW WEAPON: a blade that flies out and returns",
 		"more": "more damage, extra blades", "weapon": "moonreaver"},
 	{"name": "Thornwake", "desc": "NEW WEAPON: brambles grow along your path",
-		"more": "bigger, longer, sharper", "weapon": "thornwake"},
+		"more": "bigger, sharper brambles", "weapon": "thornwake"},
 ]
 
 var current_choices: Array = []

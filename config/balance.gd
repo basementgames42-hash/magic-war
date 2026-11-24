@@ -15,10 +15,10 @@ extends Resource
 @export_group("Endless Mode")
 ## Minutes endless mode stays on one map before it starts drifting to the next.
 ## Maps go in play order and loop back to the first after the last.
-@export_range(0.5, 30.0, 0.5) var endless_map_minutes: float = 3.5
+@export_range(0.5, 30.0, 0.5) var endless_map_minutes: float = 2.0
 ## Minutes the drift into the next map takes: the ground and foliage colours
 ## blend, and buildings, trees and rocks change a few at a time while off-screen.
-@export_range(0.1, 10.0, 0.1) var endless_blend_minutes: float = 1.5
+@export_range(0.1, 10.0, 0.1) var endless_blend_minutes: float = 1.0
 
 @export_group("Difficulty Scaling")
 ## Extra enemy health per player level above 1 (0.08 = +8% each level).
@@ -109,7 +109,7 @@ extends Resource
 @export_range(1.25, 4.0, 0.25) var crit_multiplier: float = 2.0
 ## Epic Combos (purple level-up choices made from two of the run's
 ## additional weapons): only offered once the player is past this level...
-@export_range(0, 50) var epic_min_level: int = 0
+@export_range(0, 50) var epic_min_level: int = 7
 ## ...at most this many per run...
 @export_range(1, 3) var max_epics: int = 2
 ## ...and on this share of level-ups (when there's a pair not yet combined),
@@ -138,6 +138,8 @@ extends Resource
 ## Thornwake: damage per bramble tick at level 1, and extra per level.
 @export_range(1, 50) var thornwake_damage: int = 4
 @export_range(0, 20) var thornwake_damage_per_level: int = 2
+## Seconds each Thornwake bramble patch lasts, at every level.
+@export_range(1.0, 15.0, 0.5) var thornwake_seconds: float = 5.0
 
 @export_group("Enemy Speed")
 ## Normal enemy move speed (pixels/second). Compare with Player Speed.

@@ -1,7 +1,7 @@
 extends Node2D
 # Thornwake: brambles sprout along the player's path. Enemies crossing them
-# are cut and slowed, so where you run matters. Levels make the patches
-# bigger, longer-lasting and sharper.
+# are cut and slowed, so where you run matters. Patches last
+# BALANCE.thornwake_seconds; levels make them bigger and sharper.
 
 const BRAMBLE = preload("res://scenes/spells/bramble.gd")
 const BALANCE: Balance = preload("res://config/balance.tres")
@@ -20,7 +20,7 @@ func _process(_delta: float) -> void:
 	last_drop = global_position
 	var patch: Node2D = BRAMBLE.new()
 	patch.radius = 58.0 + 10.0 * (level - 1)
-	patch.lifetime = 3.0 + 0.5 * (level - 1)
+	patch.lifetime = BALANCE.thornwake_seconds
 	patch.damage = BALANCE.thornwake_damage + BALANCE.thornwake_damage_per_level * (level - 1)
 	patch.global_position = global_position
 	get_tree().current_scene.add_child(patch)

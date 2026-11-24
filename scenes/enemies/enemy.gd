@@ -12,6 +12,7 @@ const COIN_SCENE: PackedScene = preload("res://scenes/pickups/coin.tscn")
 const BALANCE: Balance = preload("res://config/balance.tres")
 const SHOT = preload("res://scenes/enemies/enemy_shot.gd")
 const HAZARD = preload("res://scenes/enemies/enemy_hazard.gd")
+const TORCH_FIRE = preload("res://scenes/enemies/torch_fire.gd")
 const FX = preload("res://scenes/spells/spell_fx.gd")
 const DamageNumber = preload("res://scenes/ui/damage_number.gd")
 const ENEMY_ART: String = "res://scenes/assets/Tiny Swords (Enemy Pack)/Tiny Swords (Enemy Pack)/Enemy Pack/"
@@ -253,7 +254,7 @@ func brain_charge(to_player: Vector2) -> Vector2:
 func brain_arson(to_player: Vector2) -> Vector2:
 	if ai_timer <= 0.0:
 		ai_timer = 1.3
-		spawn_hazard(global_position, 58.0, 0.25, 3.0, Color(1.0, 0.4, 0.1))
+		spawn_hazard(global_position, 58.0, 0.25, 3.0, Color(1.0, 0.4, 0.1), null, false, TORCH_FIRE)
 	return to_player.normalized()
 
 # Spear Goblin: circles out of reach, darts in to stab, hops back out.
@@ -513,8 +514,8 @@ func spawn_shot(sheet: Texture2D, direction: Vector2, speed: float, spin: float,
 	get_parent().add_child(shot)
 
 func spawn_hazard(pos: Vector2, radius: float, fuse: float, linger: float, color: Color,
-		icon: Texture2D = null, ranged: bool = false) -> void:
-	var hazard: Node2D = HAZARD.new()
+		icon: Texture2D = null, ranged: bool = false, look: GDScript = HAZARD) -> void:
+	var hazard: Node2D = look.new()
 	hazard.ranged = ranged
 	hazard.radius = radius * scale.x
 	hazard.fuse = fuse
