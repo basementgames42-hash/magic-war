@@ -8,10 +8,15 @@ extends CanvasLayer
 # Past BALANCE.epic_min_level, with 2+ additional weapons, a level-up may
 # swap one choice for a purple Epic Combo of two of them (epic_combo.gd),
 # up to BALANCE.max_epics per run.
+# Endless only: from BALANCE.god_min_level, once all three additional weapons
+# are taken, one level-up offers three gold God-Tier Combos instead
+# (god_combo.gd), one led by each weapon. One per run.
 
 const BALANCE: Balance = preload("res://config/balance.tres")
 const EPIC_COMBO = preload("res://scenes/spells/epic_combo.gd")
 const EPIC_TINT := Color(0.78, 0.45, 1.25)  # Purple wash over an Epic choice's button
+const GOD_COMBO = preload("res://scenes/spells/god_combo.gd")
+const GOD_TINT := Color(1.0, 0.76, 0.22)   # God-Tier choices: a gold button (see paint_button)
 # Weapon id -> its name, for "Frozen Tempest: Lightning Arc + Frost Nova".
 const WEAPON_NAMES: Dictionary = {
 	"lightning": "Lightning Arc", "frost": "Frost Nova", "orbit": "Arcane Orbit",
@@ -69,6 +74,7 @@ var weapon_ids: Dictionary = {}             # Levelled weapon name -> its id
 var extra_weapons: int = 0                  # New weapons taken this run (spells + level-up weapons)
 var acquired: Array[String] = []            # Their ids, in pick order ("lightning", "starfall"...)
 var epics_taken: Array[String] = []         # Epic Combo ids gained this run
+var god_taken: bool = false                 # A God-Tier Combo was chosen this run
 var buttons: Array = []
 var player: Node = null
 
@@ -85,14 +91,25 @@ func open() -> void:
 	current_choices = upgrade_pool.filter(eligible)
 	current_choices.shuffle()
 	current_choices = current_choices.slice(0, 3)
-	maybe_offer_epic()
+	var god: bool = god_ready()
+	if god:
+		current_choices = god_options()
+	else:
+		maybe_offer_epic()
+	set_heading(god)
 
 	for i in 3:
 		buttons[i].text = current_choices[i]["name"] + "\n" + describe(current_choices[i])
-		paint_button(buttons[i], current_choices[i].has("epic"))
-		# Long descriptions wrap on a phone rather than pushing off the screen.
+		var tint: Variant = GOD_TINT if current_choices[i].has("god") \
+			else (EPIC_TINT if current_choices[i].has("epic") else null)
+		paint_button(buttons[i], tint)
+		# Long descriptions wrap on a phone rather than pushing off the screen,
+		# and God-Tier ones (the longest) always wrap.
 		buttons[i].autowrap_mode = TextServer.AUTOWRAP_WORD_SMART \
-			if WindowControls.is_narrow() else TextServer.AUTOWRAP_OFF
+			if WindowControls.is_narrow() or god else TextServer.AUTOWRAP_OFF
+		# God-Tier buttons are wider, so their text stays at about two lines.
+		buttons[i].custom_minimum_size.x = (560.0 if WindowControls.is_narrow() else 780.0) \
+			if god else 460.0
 
 	visible = true
 	get_tree().paused = true
@@ -122,17 +139,61 @@ func maybe_offer_epic() -> void:
 		"desc": "%s  (%s + %s)" % [EPIC_COMBO.COMBOS[id][1], WEAPON_NAMES[parts[0]], WEAPON_NAMES[parts[1]]],
 	}
 
-func paint_button(button: Button, epic: bool) -> void:
-	# Epic choices get a purple wash on every state of the button.
+func god_ready() -> bool:
+	# Endless, past the level, all three weapons in hand, none taken yet.
+	return GameData.endless and not god_taken and player.level >= BALANCE.god_min_level \
+		and acquired.size() >= BALANCE.max_extra_weapons
+
+func god_options() -> Array:
+	# Three God-Tiers from the same three weapons: each one led by a
+	# different weapon, with the other two infused into it.
+	var trio: Array[String] = acquired.slice(0, BALANCE.max_extra_weapons)
+	var out: Array = []
+	for lead in trio:
+		var others: Array = trio.filter(func(w): return w != lead)
+		var id: String = GOD_COMBO.combo_id(lead, others)
+		out.append({"god": id, "name": "GOD-TIER: " + GOD_COMBO.title(id), "desc": GOD_COMBO.blurb(id)})
+	return out
+
+func set_heading(god: bool) -> void:
+	var heading: Label = get_node_or_null("CenterContainer/VBoxContainer/TitleLabel")
+	var subtitle: Label = get_node_or_null("CenterContainer/VBoxContainer/Panel/VBoxContainer/Subtitle")
+	if heading:
+		heading.text = "GOD-TIER!" if god else "LEVEL UP!"
+	if subtitle:
+		subtitle.text = "Choose one ultimate power" if god else "Choose an upgrade"
+
+func paint_button(button: Button, tint: Variant) -> void:
+	# Epic choices get a purple wash on every state of the button. God-Tier
+	# choices are solid gold instead (tinting the blue button art toward gold
+	# just turns it green). null = the normal look.
+	for colour in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		button.remove_theme_color_override(colour)
+		if tint == GOD_TINT:
+			button.add_theme_color_override(colour, Color(0.24, 0.13, 0.02))
 	for state in ["normal", "hover", "pressed", "focus"]:
 		button.remove_theme_stylebox_override(state)
-		if epic:
+		if tint == GOD_TINT:
+			button.add_theme_stylebox_override(state, gold_box(state))
+		elif tint != null:
 			var box := button.get_theme_stylebox(state).duplicate()
 			if box is StyleBoxTexture:
-				box.modulate_color = EPIC_TINT
+				box.modulate_color = tint
 			elif box is StyleBoxFlat:
-				box.bg_color = box.bg_color * EPIC_TINT
+				box.bg_color = box.bg_color * tint
 			button.add_theme_stylebox_override(state, box)
+
+func gold_box(state: String) -> StyleBoxFlat:
+	var box := StyleBoxFlat.new()
+	box.bg_color = {"normal": GOD_TINT, "hover": GOD_TINT.lightened(0.2),
+		"pressed": GOD_TINT.darkened(0.15), "focus": GOD_TINT.lightened(0.1)}[state]
+	box.border_color = Color(0.5, 0.3, 0.05)
+	box.set_border_width_all(4)
+	box.set_corner_radius_all(12)
+	box.shadow_color = Color(1.0, 0.85, 0.3, 0.45)  # A soft golden glow round it
+	box.shadow_size = 6
+	box.set_content_margin_all(10)
+	return box
 
 func is_new_weapon(choice: Dictionary) -> bool:
 	# A spell unlock, or a level-up weapon the player doesn't have yet.
@@ -148,7 +209,7 @@ func eligible(choice: Dictionary) -> bool:
 	return true
 
 func describe(choice: Dictionary) -> String:
-	if choice.has("epic"):
+	if choice.has("epic") or choice.has("god"):
 		return choice["desc"]
 	if choice.has("weapon"):
 		var level: int = player.weapon_level(choice["weapon"])
@@ -199,6 +260,16 @@ func take_weapon(choice: Dictionary) -> void:
 
 func _on_option_pressed(index: int) -> void:
 	var choice: Dictionary = current_choices[index]
+	if choice.has("god"):
+		player.add_god(choice["god"])
+		god_taken = true
+		spells_taken.append("God-Tier: " + GOD_COMBO.title(choice["god"]))
+		visible = false
+		get_tree().paused = false
+		var scene: Node = get_tree().current_scene
+		if scene and scene.has_method("show_map_banner"):
+			scene.show_map_banner(GOD_COMBO.LEADS[GOD_COMBO.parts(choice["god"])[0]][0].to_upper())
+		return
 	if choice.has("epic"):
 		player.add_epic(choice["epic"])
 		epics_taken.append(choice["epic"])

@@ -352,6 +352,16 @@ func add_epic(id: String) -> void:
 	add_child(combo)
 	epic_combos.append(id)
 
+const GOD_COMBO = preload("res://scenes/spells/god_combo.gd")
+var god_combo: String = ""  # The God-Tier Combo id gained this run ("" = none)
+
+func add_god(id: String) -> void:
+	# A God-Tier Combo (see god_combo.gd); the three weapons keep working.
+	var combo: Node2D = GOD_COMBO.new()
+	combo.id = id
+	add_child(combo)
+	god_combo = id
+
 func weapon_level(id: String) -> int:
 	return weapon_nodes[id].level if weapon_nodes.has(id) else 0
 

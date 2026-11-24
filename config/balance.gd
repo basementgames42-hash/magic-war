@@ -117,6 +117,14 @@ extends Resource
 @export_range(0.05, 1.0, 0.05) var epic_offer_chance: float = 0.35
 ## Multiplies every Epic Combo's damage.
 @export_range(0.25, 4.0, 0.05) var epic_damage_scale: float = 1.0
+## God-Tier Combos (gold level-up choices made from all three additional
+## weapons, Endless only): offered once, at the first level-up from this
+## level with three weapons taken. Three choices at once, one per run.
+@export_range(1, 100) var god_min_level: int = 20
+## Multiplies every God-Tier Combo's damage.
+@export_range(0.25, 4.0, 0.05) var god_damage_scale: float = 1.0
+## Extra God-Tier damage per player level past god_min_level (0.04 = +4%).
+@export_range(0.0, 0.2, 0.01) var god_damage_per_level: float = 0.04
 
 @export_group("Level-Up Weapons")
 ## Highest level for Runeward Circle, Starfall, Moonreaver and Thornwake.
