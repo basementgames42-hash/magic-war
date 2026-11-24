@@ -4,7 +4,10 @@ extends Control
 # locked until the one before them is beaten. Play starts the run with the
 # hero and map in GameData; Back returns to Hero Select with the hero kept.
 
-const MAP_SIZE := Vector2(250, 206)
+# Twelve maps: smaller boxes, six to a row on a wide screen (two rows),
+# three to a row on a phone (the scroll container covers the rest).
+const MAP_SIZE := Vector2(172, 152)
+const PREVIEW_SCALE: float = 0.66   # The live preview, shrunk to fit the box
 const SELECTED_TINT := Color(1.5, 1.35, 0.7)  # Golden glow on the current pick
 const LOCKED_TINT := Color(0.45, 0.45, 0.52)
 const MAP_PREVIEW = preload("res://scenes/ui/map_preview.gd")
@@ -43,8 +46,7 @@ func _ready() -> void:
 		%PlayButton.add_sibling(test)
 
 func fit_to_screen() -> void:
-	# Phones: boxes two to a row. The scroll container covers short screens.
-	%MapRow.columns = 2 if WindowControls.is_narrow() else 4
+	%MapRow.columns = 3 if WindowControls.is_narrow() else 6
 
 func make_map_card(index: int, unlocked: bool) -> Button:
 	var map: Dictionary = Levels.MAPS[index]
@@ -55,16 +57,17 @@ func make_map_card(index: int, unlocked: bool) -> Button:
 	var preview: Control = MAP_PREVIEW.new()
 	preview.name = "Preview"
 	preview.index = index
-	preview.position = Vector2(12, 12)
+	preview.position = Vector2(11, 10)
+	preview.scale = Vector2.ONE * PREVIEW_SCALE
 	button.add_child(preview)
 	var label := Label.new()
 	label.name = "Label"
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 18)
+	label.add_theme_font_size_override("font_size", 14)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.position = Vector2(12, 140)
-	label.size = Vector2(MAP_SIZE.x - 24.0, 60.0)
+	label.position = Vector2(6, 94)
+	label.size = Vector2(MAP_SIZE.x - 12.0, 54.0)
 	button.add_child(label)
 	if unlocked:
 		label.text = "%d. %s" % [index + 1, map["name"]]
@@ -75,7 +78,8 @@ func make_map_card(index: int, unlocked: bool) -> Button:
 		label.add_theme_color_override("font_color", Color(1.0, 0.86, 0.5))
 		var lock: Control = LOCK_ICON.new()
 		lock.name = "Lock"
-		lock.position = Vector2(MAP_SIZE.x / 2.0, 72.0) - lock.size * 0.5
+		lock.scale = Vector2.ONE * 0.75
+		lock.position = Vector2(MAP_SIZE.x / 2.0, 50.0) - lock.size * 0.375
 		button.add_child(lock)
 	return button
 

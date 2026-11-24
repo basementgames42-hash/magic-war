@@ -1,6 +1,6 @@
 class_name Levels
 extends RefCounted
-# The eight maps, in play order. Each has its own ground and building colour,
+# The twelve maps, in play order. Each has its own ground and building colour,
 # its own scenery and five enemy types no other map uses. Beating a map
 # (surviving BALANCE.win_time_minutes) unlocks the next: see GameData.
 #
@@ -22,7 +22,9 @@ extends RefCounted
 #   ai     - which brain enemy.gd runs (every enemy has its own)
 #   speed, health - multipliers on the Balance base stats
 #   folder, file - where its sheets are, if not "<name>/<name>_<suffix>.png"
-#                 (the pig and pig rider live in the pack's Extra folder)
+#                 (the pig and pig rider live in the pack's Extra folder);
+#                 see sheet() below for units and whole-path suffixes
+#   units  - its art is a hero-unit colour set (rival armies), not the pack
 #   tint   - colour wash for a re-used creature's new-map variant (frost,
 #            shadow...); a map's own creatures leave it out
 #   scale  - size of a normal one, for sheets drawn bigger than usual (troll)
@@ -33,8 +35,16 @@ extends RefCounted
 const ENEMY_PACK_DIR: String = "res://scenes/assets/Tiny Swords (Enemy Pack)/Tiny Swords (Enemy Pack)/Enemy Pack/"
 
 # The sheet for one of an enemy type's animations (suffix "Run", "Attack"...).
+# A suffix with a "/" is a whole path inside the pack instead (the guard
+# poses live in Extra, apart from the creature's own sheets). units = from
+# the hero art (rival armies) rather than the enemy pack; file "" = sheets
+# named just by the suffix (the Monk's "Run", "Heal").
 static func sheet(type: Dictionary, suffix: String) -> String:
-	return ENEMY_PACK_DIR + type.get("folder", type["name"]) + "/" 		+ type.get("file", type["name"]) + "_" + suffix + ".png"
+	var root: String = Characters.UNITS_DIR if type.get("units", false) else ENEMY_PACK_DIR
+	if "/" in suffix:
+		return root + suffix + ".png"
+	var file: String = type.get("file", type["name"])
+	return root + type.get("folder", type["name"]) + "/" + (file + "_" if file != "" else "") + suffix + ".png"
 
 const MAPS: Array[Dictionary] = [
 	{
@@ -285,6 +295,142 @@ const MAPS: Array[Dictionary] = [
 				"tint": Color(1.25, 0.75, 0.65), "flat_damage": true},
 			{"name": "Troll", "run": "Walk", "attack": "Attack", "ai": "smash", "speed": 0.6, "health": 3.0,
 				"scale": 0.6},
+		],
+	},
+	# Maps 9-12: sea raiders, a rival army, shield-bearing guards, and the
+	# shadow army's citadel.
+	{
+		"name": "Saltspray Coast",
+		"boss": "Captain Brinejaw's Longboat",
+		"blurb": "Wave-washed shallows. The sharks have learned to ride.",
+		"ground": Color(1.06, 1.04, 1.44),  # Blue shallows
+		"buildings": "Yellow",
+		"foliage": Color(0.8, 1.1, 0.9),
+		"trees": ["tree1", "tree2"],
+		"rocks": ["rock1", "rock4", "stump"],
+		"scatter": [20, 30, 60],
+		"seed": 173,
+		"health": 5.2, "damage": 1.45, "spawn": 1.55,
+		"landmarks": [
+			["pirate_tower", -320, -560], ["fish_hut", -560, -420], ["fish_hut", -120, -640],
+			["pirate_tower", 760, 420], ["fish_hut", 1000, 560], ["fish_hut", 560, 620],
+			["house2", -1100, 480], ["house3", -1320, 600], ["tower", -900, 680],
+			["pirate_tower", 1300, -1100], ["fish_hut", 1520, -980], ["rock4", 1100, -940],
+			["castle", -1300, -1300], ["tower", -1030, -1260], ["fish_hut", 250, 1400],
+			["pirate_tower", -350, 1450], ["fish_hut", 1350, 1300], ["rock1", 1150, 1420],
+		],
+		"enemies": [
+			{"name": "Paddle Shark", "run": "Run", "attack": "Attack", "ai": "burrow", "speed": 1.15, "health": 1.0,
+				"tint": Color(0.8, 0.95, 1.25)},
+			{"name": "Seahorse Raider", "folder": "Extra/Seahorse Boat", "file": "Seahorse Boat",
+				"run": "Paddle Shark", "attack": "Paddle Shark", "ai": "charge", "speed": 1.1, "health": 1.2},
+			{"name": "Seahorse Harpooner", "folder": "Extra/Seahorse Boat", "file": "Seahorse Boat",
+				"run": "Harpoon Shark", "attack": "Harpoon Shark", "ai": "harpoon", "speed": 0.95, "health": 1.1},
+			{"name": "Seahorse Bombardier", "folder": "Extra/Seahorse Boat", "file": "Seahorse Boat",
+				"run": "Bomb Fish", "attack": "Bomb Fish", "ai": "lob", "speed": 0.9, "health": 1.1},
+			{"name": "Longboat", "folder": "Extra/Boat", "file": "Paddle Shark", "run": "Row", "attack": "Row",
+				"ai": "bullrush", "speed": 0.75, "health": 2.8},
+		],
+	},
+	{
+		"name": "Violet Legion Keep",
+		"boss": "Lord Amethyst, Knight of the Legion",
+		"blurb": "A rival army holds this keep. Pawns, archers, lancers, and monks to heal them all.",
+		"ground": Color(1.53, 0.84, 1.01),  # Stone courtyard
+		"buildings": "Purple",
+		"foliage": Color(0.75, 0.6, 0.95),
+		"trees": ["tree3", "tree4"],
+		"rocks": ["rock2", "rock3", "stump"],
+		"scatter": [18, 26, 12],
+		"seed": 197,
+		"health": 5.9, "damage": 1.55, "spawn": 1.6,
+		"landmarks": [
+			["castle", 0, -720], ["tower", -320, -740], ["tower", 320, -740],
+			["barracks", -700, -420], ["barracks", 700, -420], ["archery", -1100, 200],
+			["archery", 1100, 200], ["tower", -1350, 300], ["tower", 1350, 300],
+			["house1", -600, 700], ["house2", -850, 820], ["house3", 600, 700], ["house1", 850, 820],
+			["monastery", 0, 1300], ["castle", -1350, -1300], ["castle", 1350, -1300],
+			["barracks", -1300, 1300], ["barracks", 1300, 1300],
+		],
+		"enemies": [
+			{"name": "Purple Pawn", "units": true, "folder": "Purple Units/Pawn", "file": "Pawn",
+				"run": "Run", "attack": "Interact Axe", "ai": "march", "speed": 1.05, "health": 0.9},
+			{"name": "Purple Archer", "units": true, "folder": "Purple Units/Archer", "file": "Archer",
+				"run": "Run", "attack": "Shoot", "ai": "volley", "speed": 0.95, "health": 0.9},
+			{"name": "Purple Lancer", "units": true, "folder": "Purple Units/Lancer", "file": "Lancer",
+				"run": "Run", "attack": "Right_Attack", "ai": "joust", "speed": 1.1, "health": 1.2, "scale": 0.65},
+			{"name": "Purple Monk", "units": true, "folder": "Purple Units/Monk", "file": "",
+				"run": "Run", "attack": "Heal", "ai": "mend", "speed": 0.9, "health": 1.0},
+			{"name": "Purple Warrior", "units": true, "folder": "Purple Units/Warrior", "file": "Warrior",
+				"run": "Run", "attack": "Attack1", "ai": "duel", "speed": 0.9, "health": 2.4},
+		],
+	},
+	{
+		"name": "Sentinel Ruins",
+		"boss": "The Stone Sentinel",
+		"blurb": "Moss-eaten ruins still kept by their old guards. They raise their shields as one.",
+		"ground": Color(1.06, 0.81, 0.59),  # Moss
+		"buildings": "Blue",
+		"foliage": Color(0.7, 0.95, 0.6),
+		"trees": ["tree1", "tree3", "tree4", "dead_tree"],
+		"rocks": ["rock1", "rock2", "rock3", "rock4", "stump", "skull_spike1"],
+		"scatter": [40, 55, 40],
+		"seed": 211,
+		"health": 6.6, "damage": 1.65, "spawn": 1.65,
+		"landmarks": [
+			["monastery", 0, -700], ["tower", -300, -680], ["tower", 300, -680],
+			["dead_tree", -700, 300], ["rock3", -560, 480], ["tower", -900, 520],
+			["castle", 1000, 400], ["rock4", 780, 650], ["dead_tree", 1300, 700],
+			["tower", -1300, -1100], ["monastery", -1050, -1300], ["skull_spike2", -1450, -900],
+			["castle", 1200, -1200], ["dead_tree", 1450, -1000], ["tower", 0, 1400],
+			["rock2", -250, 1300], ["monastery", -1250, 1300], ["dead_tree", 1300, 1350],
+		],
+		"enemies": [
+			{"name": "Skull Guard", "folder": "Skull", "file": "Skull", "run": "Run",
+				"attack": "Extra/Skull Guard/Skull_Guard", "ai": "guard", "speed": 1.0, "health": 1.2},
+			{"name": "Imp", "run": "Move", "attack": "Attack_Loop", "ai": "blink", "speed": 0.9, "health": 1.1,
+				"tint": Color(0.8, 1.05, 0.7)},
+			{"name": "Panda Guard", "folder": "Panda", "file": "Panda", "run": "Run",
+				"attack": "Extra/Panda Guard/Panda_Guard", "ai": "guard", "speed": 0.85, "health": 1.6},
+			{"name": "Turtle Guard", "folder": "Turtle", "file": "Turtle", "run": "Walk",
+				"attack": "Extra/Turtle Guard/Turtle_Guard_In", "ai": "guard", "speed": 0.75, "health": 2.0},
+			{"name": "Minotaur Sentinel", "folder": "Minotaur", "file": "Minotaur", "run": "Walk",
+				"attack": "Extra/Minotaur Guard/Minotaur_Guard", "ai": "bullrush", "speed": 0.8, "health": 3.2,
+				"tint": Color(0.82, 0.85, 0.8)},
+		],
+	},
+	{
+		"name": "Shadow Citadel",
+		"boss": "The Shadow Colossus",
+		"blurb": "The shadow army's fortress, under a sky with no stars. End the war here.",
+		"ground": Color(0.59, 0.34, 0.52),  # Night stone
+		"buildings": "Black",
+		"foliage": Color(0.45, 0.4, 0.65),
+		"trees": ["dead_tree", "tree4"],
+		"rocks": ["skull_spike1", "skull_spike2", "bones1", "rock3"],
+		"scatter": [16, 60, 6],
+		"seed": 239,
+		"health": 7.4, "damage": 1.75, "spawn": 1.7,
+		"landmarks": [
+			["castle", 0, -750], ["tower", -330, -770], ["tower", 330, -770],
+			["skull_spike2", -160, -440], ["skull_spike2", 160, -440],
+			["barracks", -900, 300], ["archery", -1150, 450], ["tower", -700, 520],
+			["barracks", 900, 300], ["archery", 1150, 450], ["tower", 700, 520],
+			["castle", -1350, -1300], ["castle", 1350, -1300], ["monastery", 0, 1350],
+			["tower", -1350, 1300], ["tower", 1350, 1300], ["skull_spike1", -300, 1250],
+			["skull_spike1", 300, 1250],
+		],
+		"enemies": [
+			{"name": "Black Warrior", "units": true, "folder": "Black Units/Warrior", "file": "Warrior",
+				"run": "Run", "attack": "Attack1", "ai": "duel", "speed": 0.95, "health": 1.3},
+			{"name": "Black Archer", "units": true, "folder": "Black Units/Archer", "file": "Archer",
+				"run": "Run", "attack": "Shoot", "ai": "volley", "speed": 0.95, "health": 1.0},
+			{"name": "Black Monk", "units": true, "folder": "Black Units/Monk", "file": "",
+				"run": "Run", "attack": "Heal", "ai": "mend", "speed": 0.9, "health": 1.1},
+			{"name": "Hex Shaman", "run": "Run", "attack": "Attack", "ai": "hex", "speed": 0.85, "health": 1.3,
+				"tint": Color(0.65, 0.55, 0.95)},
+			{"name": "Troll", "run": "Walk", "attack": "Attack", "ai": "smash", "speed": 0.65, "health": 3.4,
+				"scale": 0.6, "tint": Color(0.55, 0.5, 0.8)},
 		],
 	},
 ]

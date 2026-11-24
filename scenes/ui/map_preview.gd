@@ -62,6 +62,30 @@ const SCENES: Array[Dictionary] = [
 		"walkers": [[4, 104, 10.0, 0.26, false], [0, 92, -20.0, 0.4, false]],
 		"fx": "embers",
 	},
+	{
+		"props": [["pirate_tower", 54, 66, 0.34], ["fish_hut", 186, 70, 0.32], ["rock4", 120, 112, 0.5],
+			["tree1", 220, 112, 0.28]],
+		"walkers": [[1, 104, 18.0, 0.42, false], [3, 90, -14.0, 0.4, false]],
+		"fx": "ripples",
+	},
+	{
+		"props": [["castle", 112, 60, 0.22], ["tower", 26, 74, 0.3], ["barracks", 204, 82, 0.22],
+			["rock3", 70, 116, 0.5]],
+		"walkers": [[0, 104, 20.0, 0.44, false], [3, 92, -14.0, 0.44, false]],
+		"fx": "wisps",
+	},
+	{
+		"props": [["monastery", 112, 64, 0.24], ["dead_tree", 30, 76, 0.24], ["tree3", 204, 76, 0.32],
+			["rock2", 150, 116, 0.5], ["skull_spike1", 60, 114, 0.5]],
+		"walkers": [[0, 104, 14.0, 0.44, false], [2, 92, -12.0, 0.36, false]],
+		"fx": "fireflies",
+	},
+	{
+		"props": [["castle", 112, 60, 0.22], ["skull_spike2", 28, 74, 0.5], ["tower", 204, 78, 0.3],
+			["bones1", 70, 116, 0.6]],
+		"walkers": [[0, 104, 18.0, 0.44, false], [4, 92, -9.0, 0.24, false]],
+		"fx": "wisps",
+	},
 ]
 
 var index: int = 0           # Which map; set before add_child

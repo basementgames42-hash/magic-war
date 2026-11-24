@@ -21,6 +21,7 @@ const HARPOON: Texture2D = preload(ENEMY_ART + "Harpoon Shark/Harpoon.png")
 const BOMB: Texture2D = preload(ENEMY_ART + "Bomb Fish/Bomb_Idle.png")
 const HEX_BOLT: Texture2D = preload(ENEMY_ART + "Hex Shaman/Hex Shaman_Projectile.png")
 const ACORN: Texture2D = preload(ENEMY_ART + "Slingshot Gnome/Acorn_Projectile.png")
+const ARROW: Texture2D = preload("res://scenes/assets/Tiny Swords (Free Pack)/Tiny Swords (Free Pack)/Units/Purple Units/Archer/Arrow.png")
 const FLIERS: Array[String] = ["swoop", "sting"]  # Pass over buildings and trees
 const WINDUP_TINT := Color(1.7, 0.75, 0.6)        # "About to strike" warning glow
 
@@ -569,6 +570,78 @@ func brain_smash(to_player: Vector2) -> Vector2:
 	if ai_timer <= 0.0:
 		enter_state(0, 0.0)
 	return Vector2.ZERO
+
+# Guards (Skull, Panda and Turtle Guard): advance, and when you get close
+# raise their guard (the guard pose) and take only a sliver of damage for a
+# moment, then come on again. Hit them between guards.
+func brain_guard(to_player: Vector2) -> Vector2:
+	match ai_state:
+		0:
+			if to_player.length() < 260.0 and ai_timer <= 0.0:
+				enter_state(1, 1.4)
+				attack_anim_timer = 1.4  # Hold the guard pose the whole time
+				anim.play("attack")
+			return to_player.normalized()
+		1:
+			damage_resist = 0.85
+			modulate = Color(0.8, 0.85, 1.0)
+			can_bite = false
+			if ai_timer <= 0.0:
+				damage_resist = 0.0
+				enter_state(0, 2.4)  # Guard drops; a window before the next one
+			return Vector2.ZERO
+	return to_player.normalized()
+
+# Monks (rival armies): walk with the army and, every few seconds, heal the
+# wounded around them. Kill the healers first.
+const HEAL_RADIUS: float = 240.0
+func brain_mend(to_player: Vector2) -> Vector2:
+	if ai_timer <= 0.0:
+		ai_timer = 3.0
+		var healed := 0
+		for e in get_tree().get_nodes_in_group("enemies"):
+			if e != self and e.health < e.max_health \
+					and e.global_position.distance_to(global_position) < HEAL_RADIUS:
+				e.health = mini(e.health + maxi(roundi(e.max_health * 0.2), 1), e.max_health)
+				FX.burst(get_parent(), e.global_position, Color(0.5, 1.0, 0.55), 8, 120.0, 0.4, 0.25)
+				healed += 1
+		if healed > 0:
+			show_attack()
+			FX.burst(get_parent(), global_position, Color(0.6, 1.0, 0.6), 16, HEAL_RADIUS * 1.6, 0.45, 0.3)
+	return ranged_advance(to_player)
+
+# Archers (rival armies): close in, loosing arrows on the way.
+func brain_volley(to_player: Vector2) -> Vector2:
+	if shot_timer <= 0.0 and to_player.length() < 560.0 and can_fire():
+		shot_timer = 1.8
+		show_attack()
+		spawn_shot(ARROW, to_player.normalized(), 620.0, 0.0, 0.0)
+	return ranged_advance(to_player)
+
+# Warriors (rival armies, and the Legion's knight): march up, plant their
+# feet, then lunge with a sword slash and step back to recover.
+func brain_duel(to_player: Vector2) -> Vector2:
+	match ai_state:
+		0:
+			if to_player.length() < 170.0 * maxf(scale.x, 1.0):
+				enter_state(1, 0.45)
+			return to_player.normalized()
+		1:
+			wind_up()
+			if ai_timer <= 0.0:
+				enter_state(2, 0.22)
+				ai_dir = to_player.normalized()
+				show_attack()
+			return Vector2.ZERO
+		2:
+			speed_factor = 3.8
+			if ai_timer <= 0.0:
+				enter_state(3, 0.5)
+			return ai_dir
+	speed_factor = 0.5
+	if ai_timer <= 0.0:
+		enter_state(0, 0.0)
+	return -ai_dir  # A step back to recover
 
 # Shared by every enemy: the earliest moment (engine clock, seconds) the next
 # shot may be fired, so ranged enemies take turns (BALANCE.enemy_shots_per_second).
