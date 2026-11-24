@@ -451,6 +451,9 @@ func spawn_elite() -> void:
 	# An elite is a regular enemy with cranked stats — no new scene needed.
 	var elite: CharacterBody2D = make_enemy()
 	elite.coin_drop = BALANCE.coins_per_elite
+	# Elite goblins hit harder than their small kin, still as flat damage.
+	elite.flat_contact = BALANCE.elite_goblin_hit
+	elite.flat_fire = BALANCE.elite_goblin_fire
 	# Base elite stats come from res://config/balance.tres.
 	elite.max_health = BALANCE.elite_health + int(elapsed / 60.0) * BALANCE.elite_health_per_minute
 	elite.move_speed = BALANCE.elite_speed * enemy_type["speed"] * enemy_speed_scale()  # Slower, scarier

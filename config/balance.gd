@@ -180,6 +180,10 @@ extends Resource
 ## of throwers takes turns instead of firing in one wall. Only enemies on
 ## screen may shoot, so every shot can be seen coming.
 @export_range(0.25, 10.0, 0.25) var enemy_shots_per_second: float = 1.5
+## Elite goblins: HP one hit costs, and HP each tick of an elite Torch
+## Goblin's fire costs (flat: no multipliers). Normal goblins cost 1 and 1.
+@export_range(1, 20) var elite_goblin_hit: int = 3
+@export_range(1, 20) var elite_goblin_fire: int = 2
 ## Seconds between one enemy's hits. Lower = swarms hurt faster.
 @export_range(0.1, 3.0, 0.05) var enemy_attack_cooldown: float = 0.6
 ## Hits within this many seconds of the last one build a swarm streak.

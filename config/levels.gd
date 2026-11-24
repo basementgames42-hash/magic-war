@@ -21,8 +21,9 @@ extends RefCounted
 #   name, run, attack - folder and sheet suffixes in the Enemy Pack
 #   ai     - which brain enemy.gd runs (every enemy has its own)
 #   speed, health - multipliers on the Balance base stats
-#   flat_damage - every hit (contact or its hazards) costs exactly 1 HP,
-#                 ignoring damage multipliers and the swarm streak (goblins)
+#   flat_damage - every hit (contact or its hazards) costs a flat amount of
+#                 HP, ignoring damage multipliers and the swarm streak: 1 for
+#                 a normal goblin, more for an elite one (balance.tres)
 
 const ENEMY_PACK_DIR: String = "res://scenes/assets/Tiny Swords (Enemy Pack)/Tiny Swords (Enemy Pack)/Enemy Pack/"
 
