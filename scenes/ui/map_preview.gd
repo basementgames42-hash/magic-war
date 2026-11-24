@@ -12,7 +12,7 @@ const SIZE := Vector2(226, 124)
 # Per map (same order as Levels.MAPS):
 #   props   - [kind, x, y, scale] (x, y = where it meets the ground)
 #   walkers - [index into the map's enemies, y, speed, scale, flies?]
-#   fx      - "fireflies", "embers", "ripples" or "wisps"
+#   fx      - "fireflies", "embers", "ripples", "wisps", "snow" or "dust"
 const SCENES: Array[Dictionary] = [
 	{
 		"props": [["house1", 52, 64, 0.38], ["tree1", 178, 56, 0.36], ["tree2", 206, 82, 0.32],
@@ -37,6 +37,30 @@ const SCENES: Array[Dictionary] = [
 			["skull_spike1", 108, 112, 0.5], ["bones2", 214, 116, 0.6]],
 		"walkers": [[2, 104, 15.0, 0.42, false], [0, 40, -26.0, 0.36, true]],
 		"fx": "wisps",
+	},
+	{
+		"props": [["castle", 112, 62, 0.22], ["tree1", 26, 70, 0.34], ["tree2", 206, 76, 0.32],
+			["tree1", 180, 112, 0.28], ["rock1", 60, 114, 0.5]],
+		"walkers": [[1, 104, 16.0, 0.42, false], [0, 92, -20.0, 0.4, false]],
+		"fx": "snow",
+	},
+	{
+		"props": [["monastery", 112, 66, 0.24], ["tree3", 30, 74, 0.36], ["dead_tree", 202, 80, 0.24],
+			["bones1", 150, 114, 0.6], ["tree4", 64, 116, 0.3]],
+		"walkers": [[2, 104, 24.0, 0.44, false], [0, 40, -24.0, 0.36, true]],
+		"fx": "wisps",
+	},
+	{
+		"props": [["tower", 56, 66, 0.3], ["dead_tree", 190, 74, 0.26], ["gold_stone2", 128, 60, 0.42],
+			["bones2", 96, 114, 0.6], ["skull_spike2", 214, 116, 0.5]],
+		"walkers": [[2, 102, 20.0, 0.36, false], [1, 88, -16.0, 0.4, false]],
+		"fx": "dust",
+	},
+	{
+		"props": [["castle", 112, 60, 0.22], ["skull_spike2", 30, 72, 0.5], ["skull_spike1", 200, 76, 0.5],
+			["goblin_hut", 190, 116, 0.22], ["bones1", 60, 114, 0.6]],
+		"walkers": [[4, 104, 10.0, 0.26, false], [0, 92, -20.0, 0.4, false]],
+		"fx": "embers",
 	},
 ]
 
@@ -78,6 +102,7 @@ func _ready() -> void:
 		walker.scale = Vector2.ONE * entry[3] * minf(192.0 / frame_size, 1.0)
 		walker.offset = Vector2(0, -frame_size * 0.2)
 		walker.flip_h = entry[2] < 0.0
+		walker.self_modulate = map["enemies"][entry[0]].get("tint", Color.WHITE)
 		walker.position = Vector2(randf() * SIZE.x, entry[1])
 		walker.play()
 		stage.add_child(walker)
@@ -127,7 +152,7 @@ func make_prop(kind: String, map: Dictionary, spot: Vector2, prop_scale: float) 
 	return node
 
 func run_frames(type: Dictionary) -> SpriteFrames:
-	var sheet: Texture2D = load(Levels.ENEMY_PACK_DIR + type["name"] + "/" + type["name"] + "_" + type["run"] + ".png")
+	var sheet: Texture2D = load(Levels.sheet(type, type["run"]))
 	var frames := SpriteFrames.new()
 	frames.set_animation_speed(&"default", 8.0)
 	var side: float = sheet.get_height()
@@ -167,6 +192,14 @@ func new_mote(anywhere: bool) -> Array:
 			return [spot, Vector2(randf_range(-5, 5), randf_range(-26, -14)), randf() * TAU, randf_range(1.0, 2.0)]
 		"ripples":
 			return [spot, Vector2.ZERO, randf() * TAU, randf_range(6.0, 12.0)]
+		"snow":
+			if not anywhere:
+				spot.y = -4.0
+			return [spot, Vector2(randf_range(-6, 6), randf_range(12, 22)), randf() * TAU, randf_range(1.0, 2.2)]
+		"dust":
+			if not anywhere:
+				spot.x = -4.0
+			return [spot, Vector2(randf_range(18, 32), randf_range(-3, 3)), randf() * TAU, randf_range(1.0, 2.0)]
 		_:  # wisps
 			if not anywhere:
 				spot.y = SIZE.y + 4.0
@@ -194,6 +227,15 @@ func _draw_fx() -> void:
 				fx.draw_set_transform(mote[0], 0.0, Vector2(1.0, 0.45))
 				fx.draw_arc(Vector2.ZERO, r, 0.0, TAU, 20, colour, 1.2, true)
 				fx.draw_set_transform(Vector2.ZERO)
+		"snow":
+			for mote in motes:
+				fx.draw_circle(mote[0] + Vector2(sin(time * 1.5 + mote[2]) * 3.0, 0.0), mote[3],
+					Color(1.0, 1.0, 1.0, 0.85))
+		"dust":
+			for mote in motes:
+				fx.draw_circle(mote[0], mote[3], Color(1.0, 0.9, 0.65, 0.45))
+			# Heat shimmer along the bottom.
+			fx.draw_rect(Rect2(0, SIZE.y - 12.0, SIZE.x, 12.0), Color(1.0, 0.85, 0.5, 0.06 + 0.03 * sin(time * 2.0)))
 		_:
 			for mote in motes:
 				var pulse: float = 0.5 + 0.5 * sin(time * 2.0 + mote[2])

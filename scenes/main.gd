@@ -407,10 +407,9 @@ func get_enemy_frames() -> SpriteFrames:
 func build_enemy_frames(type: Dictionary) -> SpriteFrames:
 	var frames := SpriteFrames.new()
 	frames.remove_animation(&"default")
-	var base: String = Levels.ENEMY_PACK_DIR + type["name"] + "/" + type["name"] + "_"
 	# [animation name, sheet suffix, fps] — same names/speeds for every enemy.
 	for entry in [[&"run", type["run"], 10.0], [&"attack", type["attack"], 12.0]]:
-		var sheet: Texture2D = load(base + entry[1] + ".png")
+		var sheet: Texture2D = load(Levels.sheet(type, entry[1]))
 		frames.add_animation(entry[0])
 		frames.set_animation_speed(entry[0], entry[2])
 		frames.set_animation_loop(entry[0], true)
@@ -428,6 +427,7 @@ func make_enemy() -> CharacterBody2D:
 	enemy.custom_frames = get_enemy_frames()
 	enemy.ai = enemy_type["ai"]
 	enemy.flat_hit = enemy_type.get("flat_damage", false)
+	enemy.variant_tint = enemy_type.get("tint", Color.WHITE)
 	enemy.global_position = spawn_point()
 	enemy.killed.connect(_on_enemy_killed)
 	return enemy
@@ -437,6 +437,7 @@ func spawn_enemy() -> void:
 		return
 	var enemy: CharacterBody2D = make_enemy()
 	enemy.move_speed *= enemy_type["speed"] * enemy_speed_scale()
+	enemy.scale *= enemy_type.get("scale", 1.0)  # Oversized sheets (troll) drawn smaller
 
 	# Enemies get extra max HP per full minute elapsed. Setting it BEFORE
 	# add_child works because _ready (health = max_health) runs on add.

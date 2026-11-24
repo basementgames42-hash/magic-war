@@ -1,6 +1,6 @@
 class_name Levels
 extends RefCounted
-# The four maps, in play order. Each has its own ground and building colour,
+# The eight maps, in play order. Each has its own ground and building colour,
 # its own scenery and five enemy types no other map uses. Beating a map
 # (surviving BALANCE.win_time_minutes) unlocks the next: see GameData.
 #
@@ -21,11 +21,20 @@ extends RefCounted
 #   name, run, attack - folder and sheet suffixes in the Enemy Pack
 #   ai     - which brain enemy.gd runs (every enemy has its own)
 #   speed, health - multipliers on the Balance base stats
+#   folder, file - where its sheets are, if not "<name>/<name>_<suffix>.png"
+#                 (the pig and pig rider live in the pack's Extra folder)
+#   tint   - colour wash for a re-used creature's new-map variant (frost,
+#            shadow...); a map's own creatures leave it out
+#   scale  - size of a normal one, for sheets drawn bigger than usual (troll)
 #   flat_damage - every hit (contact or its hazards) costs a flat amount of
 #                 HP, ignoring damage multipliers and the swarm streak: 1 for
 #                 a normal goblin, more for an elite one (balance.tres)
 
 const ENEMY_PACK_DIR: String = "res://scenes/assets/Tiny Swords (Enemy Pack)/Tiny Swords (Enemy Pack)/Enemy Pack/"
+
+# The sheet for one of an enemy type's animations (suffix "Run", "Attack"...).
+static func sheet(type: Dictionary, suffix: String) -> String:
+	return ENEMY_PACK_DIR + type.get("folder", type["name"]) + "/" 		+ type.get("file", type["name"]) + "_" + suffix + ".png"
 
 const MAPS: Array[Dictionary] = [
 	{
@@ -138,6 +147,144 @@ const MAPS: Array[Dictionary] = [
 			{"name": "Imp", "run": "Move", "attack": "Attack_Loop", "ai": "blink", "speed": 0.9, "health": 1.1},
 			{"name": "Hex Shaman", "run": "Run", "attack": "Attack", "ai": "hex", "speed": 0.85, "health": 1.2},
 			{"name": "Minotaur", "run": "Walk", "attack": "Attack", "ai": "bullrush", "speed": 0.8, "health": 3.0},
+		],
+	},
+	# Maps 5-8: each brings one creature new to the war, alongside variants of
+	# known ones in the map's colours (tint), and a boss of its own.
+	{
+		"name": "Frostpeak Pass",
+		"boss": "Frostjaw the Ice Bear",
+		"blurb": "A frozen mountain road. The dead march even in the snow.",
+		"ground": Color(2.54, 1.54, 1.81),  # Snow
+		"buildings": "Blue",
+		"foliage": Color(0.78, 1.0, 1.15),
+		"trees": ["tree1", "tree2", "tree1"],
+		"rocks": ["rock1", "rock2", "rock4", "stump"],
+		"scatter": [48, 42, 25],
+		"seed": 89,
+		"health": 3.0, "damage": 0.9, "spawn": 1.35,
+		"landmarks": [
+			["castle", 0, -700], ["tower", -290, -700], ["tower", 290, -700],
+			["house1", -600, 380], ["house2", -820, 520], ["house3", -560, 640],
+			["monastery", 1150, 420], ["tower", 1380, 300], ["house1", 960, 640],
+			["barracks", -1250, -560], ["archery", -1500, -380], ["rock4", -1080, -380],
+			["house2", 420, 1350], ["house3", 690, 1450], ["tower", 150, 1480],
+			["castle", -1350, 1300], ["rock1", -1050, 1150], ["house1", 1450, -1250],
+			["tower", 1680, -1100], ["rock2", 1250, -1050],
+		],
+		"enemies": [
+			{"name": "Skull", "run": "Run", "attack": "Attack", "ai": "march", "speed": 1.0, "health": 1.0,
+				"tint": Color(0.78, 0.95, 1.25)},
+			{"name": "Slingshot Gnome", "run": "Run", "attack": "Shoot", "ai": "sling", "speed": 1.05, "health": 0.9},
+			{"name": "Spider", "run": "Run", "attack": "Attack", "ai": "pounce", "speed": 0.85, "health": 1.1,
+				"tint": Color(0.78, 0.95, 1.25)},
+			{"name": "Snake", "run": "Run", "attack": "Attack", "ai": "slither", "speed": 1.0, "health": 1.1,
+				"tint": Color(0.78, 0.95, 1.25)},
+			{"name": "Bear", "run": "Run", "attack": "Attack", "ai": "enrage", "speed": 0.6, "health": 2.6,
+				"tint": Color(0.8, 0.95, 1.3)},
+		],
+	},
+	{
+		"name": "Duskwood Hollow",
+		"boss": "Gloomhide the Shadow Panda",
+		"blurb": "A forest where the sun never quite comes up. Something stampedes in the dark.",
+		"ground": Color(1.0, 0.44, 0.89),  # Dusk violet
+		"buildings": "Purple",
+		"foliage": Color(0.58, 0.45, 0.88),
+		"trees": ["tree3", "tree4", "tree3", "dead_tree"],
+		"rocks": ["rock3", "bones1", "skull_spike1", "stump"],
+		"scatter": [55, 28, 45],
+		"seed": 113,
+		"health": 3.5, "damage": 1.05, "spawn": 1.4,
+		"landmarks": [
+			["monastery", 0, -680], ["house3", -320, -620], ["house2", 320, -620],
+			["house1", -780, 320], ["tower", -1000, 420], ["dead_tree", -560, 520],
+			["barracks", 980, 380], ["house3", 1220, 560], ["dead_tree", 820, 640],
+			["castle", -1300, -1200], ["tower", -1020, -1160], ["tower", -1580, -1160],
+			["house1", 1300, -980], ["house2", 1520, -860], ["skull_spike2", 1180, -760],
+			["archery", 120, 1400], ["dead_tree", -260, 1380], ["house3", 1250, 1350],
+			["tower", -1450, 1250], ["dead_tree", -1200, 1450],
+		],
+		"enemies": [
+			{"name": "Giant Bat", "run": "Move", "attack": "Attack", "ai": "swoop", "speed": 1.15, "health": 0.9,
+				"tint": Color(0.75, 0.6, 1.05)},
+			{"name": "Thief", "run": "Run", "attack": "Attack", "ai": "flank", "speed": 1.2, "health": 1.0,
+				"tint": Color(0.75, 0.6, 1.05)},
+			{"name": "Pig", "folder": "Extra/Pig", "file": "Pig", "run": "Run", "attack": "Run",
+				"ai": "stampede", "speed": 1.0, "health": 1.2},
+			{"name": "Imp", "run": "Move", "attack": "Attack_Loop", "ai": "blink", "speed": 0.9, "health": 1.1,
+				"tint": Color(0.8, 0.6, 1.1)},
+			{"name": "Panda", "run": "Run", "attack": "Attack", "ai": "slam", "speed": 0.8, "health": 1.9,
+				"tint": Color(0.7, 0.55, 1.0)},
+		],
+	},
+	{
+		"name": "Sunscorch Dunes",
+		"boss": "Sandshell the Dune Tortoise",
+		"blurb": "Endless sand and bleached bones. Riders come out of the haze.",
+		"ground": Color(2.54, 1.21, 0.85),  # Sand
+		"buildings": "Yellow",
+		"foliage": Color(1.3, 1.1, 0.6),
+		"trees": ["dead_tree", "tree3", "dead_tree"],
+		"rocks": ["rock2", "rock3", "bones2", "gold_stone2", "skull_spike2"],
+		"scatter": [14, 58, 15],
+		"seed": 137,
+		"health": 4.0, "damage": 1.2, "spawn": 1.45,
+		"landmarks": [
+			["castle", 0, 700], ["tower", -280, 720], ["tower", 280, 720],
+			["gold_stone", -620, -420], ["gold_stone2", -520, -340], ["bones1", -720, -300],
+			["house2", 980, -420], ["house3", 1200, -300], ["tower", 1400, -480],
+			["archery", -1250, 360], ["barracks", -1500, 560], ["dead_tree", -1050, 600],
+			["house1", 1250, 1150], ["house2", 1500, 1260], ["skull_spike2", 1080, 1300],
+			["monastery", -1150, -1250], ["gold_stone", 300, -1450], ["bones2", 520, -1380],
+			["dead_tree", -300, -1350], ["tower", 1650, -1200],
+		],
+		"enemies": [
+			{"name": "Gnome", "run": "Run", "attack": "Attack", "ai": "scurry", "speed": 1.1, "health": 0.9,
+				"tint": Color(1.25, 1.05, 0.75)},
+			{"name": "Lizard", "run": "Run", "attack": "Attack", "ai": "charge", "speed": 0.85, "health": 1.6,
+				"tint": Color(1.25, 1.05, 0.75)},
+			{"name": "Pig Rider", "folder": "Extra/Pig Rider Spear Goblin", "file": "Pig Rider",
+				"run": "Run", "attack": "Attack", "ai": "joust", "speed": 1.1, "health": 1.3},
+			{"name": "Gnoll", "run": "Walk", "attack": "Throw", "ai": "kite", "speed": 0.95, "health": 1.0,
+				"tint": Color(1.25, 1.05, 0.75)},
+			{"name": "Turtle", "run": "Walk", "attack": "Attack", "ai": "shell", "speed": 0.6, "health": 2.6,
+				"tint": Color(1.3, 1.1, 0.7)},
+		],
+	},
+	{
+		"name": "Ashen Throne",
+		"boss": "Cinderhulk, Warden of the Ashen Throne",
+		"blurb": "The burnt heart of the Magic War. Its warden has never been moved.",
+		"ground": Color(1.06, 0.44, 0.44),  # Ash
+		"buildings": "Black",
+		"foliage": Color(0.62, 0.36, 0.3),
+		"trees": ["dead_tree", "tree4", "dead_tree"],
+		"rocks": ["skull_spike1", "skull_spike2", "bones1", "bones2", "rock3"],
+		"scatter": [22, 72, 8],
+		"seed": 151,
+		"health": 4.6, "damage": 1.35, "spawn": 1.5,
+		"landmarks": [
+			["castle", 0, -720], ["tower", -300, -740], ["tower", 300, -740],
+			["skull_spike2", -150, -420], ["skull_spike2", 150, -420],
+			["skull_spike1", -320, -300], ["skull_spike1", 320, -300],
+			["barracks", -1100, 300], ["tower", -1330, 200], ["goblin_hut", -900, 520],
+			["goblin_hut", 1050, 420], ["goblin_hut", 1250, 620], ["tower", 1450, 380],
+			["monastery", -1250, -1250], ["skull_spike2", -1000, -1100], ["castle", 1300, 1300],
+			["tower", 1050, 1340], ["tower", 1560, 1340], ["skull_spike1", -1400, 1300],
+			["dead_tree", 300, 1400], ["goblin_hut", -300, 1450],
+		],
+		"enemies": [
+			{"name": "Torch Goblin", "run": "Run", "attack": "Attack", "ai": "arson", "speed": 1.05, "health": 1.0,
+				"tint": Color(1.25, 0.75, 0.65), "flat_damage": true},
+			{"name": "Hex Shaman", "run": "Run", "attack": "Attack", "ai": "hex", "speed": 0.85, "health": 1.2,
+				"tint": Color(1.25, 0.75, 0.65)},
+			{"name": "Bumblebee", "run": "Move", "attack": "Attack", "ai": "sting", "speed": 1.3, "health": 0.9,
+				"tint": Color(1.25, 0.75, 0.65)},
+			{"name": "Spear Goblin", "run": "Run", "attack": "Attack Fast", "ai": "skirmish", "speed": 1.1, "health": 1.0,
+				"tint": Color(1.25, 0.75, 0.65), "flat_damage": true},
+			{"name": "Troll", "run": "Walk", "attack": "Attack", "ai": "smash", "speed": 0.6, "health": 3.0,
+				"scale": 0.6},
 		],
 	},
 ]

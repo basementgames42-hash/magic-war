@@ -20,6 +20,7 @@ const BONE: Texture2D = preload(ENEMY_ART + "Gnoll/Gnoll_Bone.png")
 const HARPOON: Texture2D = preload(ENEMY_ART + "Harpoon Shark/Harpoon.png")
 const BOMB: Texture2D = preload(ENEMY_ART + "Bomb Fish/Bomb_Idle.png")
 const HEX_BOLT: Texture2D = preload(ENEMY_ART + "Hex Shaman/Hex Shaman_Projectile.png")
+const ACORN: Texture2D = preload(ENEMY_ART + "Slingshot Gnome/Acorn_Projectile.png")
 const FLIERS: Array[String] = ["swoop", "sting"]  # Pass over buildings and trees
 const WINDUP_TINT := Color(1.7, 0.75, 0.6)        # "About to strike" warning glow
 
@@ -58,6 +59,7 @@ var custom_frames: SpriteFrames = null
 var flat_hit: bool = false
 var flat_contact: int = 1
 var flat_fire: int = 1
+var variant_tint: Color = Color.WHITE  # A new map's variant of a known creature (set by Main)
 var is_boss: bool = false  # The map's final boss (set by Main): glows, shrugs off nukes
 # Obstacle avoidance: the wall we're touching (its surface normal) and
 # which way (+1/-1) we've decided to walk around it.
@@ -94,6 +96,7 @@ func _ready() -> void:
 	if custom_frames != null:
 		anim.sprite_frames = custom_frames
 	health = max_health
+	anim.self_modulate = variant_tint  # (Hit flashes and frost use anim.modulate on top)
 	if is_boss:
 		# A pulsing red-gold glow behind the boss, so it reads as one at a glance.
 		var glow: Sprite2D = FX.glow_sprite(Color(1.0, 0.45, 0.15, 0.85), 150.0)
@@ -484,6 +487,85 @@ func brain_bullrush(to_player: Vector2) -> Vector2:
 			elif ai_timer <= 0.0:
 				enter_state(3, 0.7)
 			return ai_dir
+	if ai_timer <= 0.0:
+		enter_state(0, 0.0)
+	return Vector2.ZERO
+
+# Slingshot Gnome: scampers at you, stopping only to pelt you with acorns.
+func brain_sling(to_player: Vector2) -> Vector2:
+	if shot_timer <= 0.0 and to_player.length() < 520.0 and can_fire():
+		shot_timer = 2.0
+		show_attack()
+		spawn_shot(ACORN, to_player.normalized(), 470.0, 12.0, 0.0)
+	return ranged_advance(to_player)
+
+# Pig: trots closer, paws the ground, then stampedes in a straight line
+# through where you were, skids to a halt and goes again. Comes in herds.
+func brain_stampede(to_player: Vector2) -> Vector2:
+	match ai_state:
+		0:
+			if to_player.length() < 320.0:
+				enter_state(1, 0.35)
+			return to_player.normalized()
+		1:
+			wind_up()
+			if ai_timer <= 0.0:
+				enter_state(2, 0.9)
+				ai_dir = to_player.normalized()
+			return Vector2.ZERO
+		2:
+			speed_factor = 2.7
+			if ai_timer <= 0.0:
+				enter_state(3, 0.5)
+			return ai_dir
+	speed_factor = 0.4  # Skidding
+	if ai_timer <= 0.0:
+		enter_state(0, 0.0)
+	return ai_dir
+
+# Pig Rider: circles at lance distance, lowers its spear, gallops straight
+# through you, then wheels round for another pass.
+func brain_joust(to_player: Vector2) -> Vector2:
+	match ai_state:
+		0:
+			var dist: float = to_player.length()
+			if dist < 360.0 and ai_timer <= 0.0:
+				enter_state(1, 0.6)
+				return Vector2.ZERO
+			var closer: float = 0.6 if dist > 300.0 else -0.2
+			return (to_player.normalized().orthogonal() * 0.8 + to_player.normalized() * closer).normalized()
+		1:
+			wind_up()
+			if ai_timer <= 0.0:
+				enter_state(2, 0.75)
+				ai_dir = to_player.normalized()
+				show_attack()
+			return Vector2.ZERO
+		2:
+			speed_factor = 3.3
+			if ai_timer <= 0.0:
+				enter_state(3, 0.6)
+			return ai_dir
+	speed_factor = 0.9
+	if ai_timer <= 0.0:
+		enter_state(0, 1.2)  # A breather before the next charge
+	return ai_dir.rotated(1.2)  # Wheeling round
+
+# Troll: lumbers in and raises its club (a wide ring warns you), smashes
+# everything in the ring, then needs a moment to heave the club back up.
+func brain_smash(to_player: Vector2) -> Vector2:
+	match ai_state:
+		0:
+			if to_player.length() < 230.0 * scale.x:
+				enter_state(1, 0.9)
+				spawn_hazard(global_position, 240.0, 0.9, 0.0, Color(1.0, 0.45, 0.2))
+				show_attack()
+			return to_player.normalized()
+		1:
+			wind_up()
+			if ai_timer <= 0.0:
+				enter_state(2, 0.8)  # Getting the club back up
+			return Vector2.ZERO
 	if ai_timer <= 0.0:
 		enter_state(0, 0.0)
 	return Vector2.ZERO
