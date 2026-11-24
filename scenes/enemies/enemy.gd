@@ -53,6 +53,7 @@ var attack_timer: float = 0.0
 # Set by Main before add_child to swap the look. Needs "run" and "attack"
 # animations. Left null = the skeleton frames baked into the scene.
 var custom_frames: SpriteFrames = null
+var flat_hit: bool = false  # Every hit costs exactly 1 HP, no multipliers (goblins; set by Main)
 var is_boss: bool = false  # The map's final boss (set by Main): glows, shrugs off nukes
 # Obstacle avoidance: the wall we're touching (its surface normal) and
 # which way (+1/-1) we've decided to walk around it.
@@ -172,7 +173,7 @@ func _physics_process(delta: float) -> void:
 	attack_timer -= delta
 	if can_bite and attack_timer <= 0.0 and player.visible \
 			and global_position.distance_to(player.global_position) <= touch_distance:
-		player.take_damage(contact_damage)
+		player.take_damage(1 if flat_hit else contact_damage, false, flat_hit)
 		if ai == "slither":
 			player.apply_slow(0.6, 1.5)  # Venom
 		show_attack()
@@ -522,7 +523,8 @@ func spawn_hazard(pos: Vector2, radius: float, fuse: float, linger: float, color
 	hazard.linger = linger
 	hazard.color = color
 	hazard.icon = icon
-	hazard.damage = contact_damage
+	hazard.damage = 1 if flat_hit else contact_damage
+	hazard.flat = flat_hit
 	hazard.global_position = pos
 	get_parent().add_child(hazard)
 

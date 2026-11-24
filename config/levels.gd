@@ -21,6 +21,8 @@ extends RefCounted
 #   name, run, attack - folder and sheet suffixes in the Enemy Pack
 #   ai     - which brain enemy.gd runs (every enemy has its own)
 #   speed, health - multipliers on the Balance base stats
+#   flat_damage - every hit (contact or its hazards) costs exactly 1 HP,
+#                 ignoring damage multipliers and the swarm streak (goblins)
 
 const ENEMY_PACK_DIR: String = "res://scenes/assets/Tiny Swords (Enemy Pack)/Tiny Swords (Enemy Pack)/Enemy Pack/"
 
@@ -69,8 +71,8 @@ const MAPS: Array[Dictionary] = [
 			["tower", 1770, -1280], ["barracks", -320, 1420], ["goblin_hut", 60, 1500],
 		],
 		"enemies": [
-			{"name": "Torch Goblin", "run": "Run", "attack": "Attack", "ai": "arson", "speed": 1.05, "health": 1.0},
-			{"name": "Spear Goblin", "run": "Run", "attack": "Attack Fast", "ai": "skirmish", "speed": 1.1, "health": 1.0},
+			{"name": "Torch Goblin", "run": "Run", "attack": "Attack", "ai": "arson", "speed": 1.05, "health": 1.0, "flat_damage": true},
+			{"name": "Spear Goblin", "run": "Run", "attack": "Attack Fast", "ai": "skirmish", "speed": 1.1, "health": 1.0, "flat_damage": true},
 			{"name": "Gnoll", "run": "Walk", "attack": "Throw", "ai": "kite", "speed": 0.95, "health": 0.9},
 			{"name": "Panda", "run": "Run", "attack": "Attack", "ai": "slam", "speed": 0.8, "health": 1.8},
 			{"name": "Bear", "run": "Run", "attack": "Attack", "ai": "enrage", "speed": 0.6, "health": 2.5},

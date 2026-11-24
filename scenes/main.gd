@@ -427,6 +427,7 @@ func make_enemy() -> CharacterBody2D:
 	var enemy: CharacterBody2D = ENEMY_SCENE.instantiate()
 	enemy.custom_frames = get_enemy_frames()
 	enemy.ai = enemy_type["ai"]
+	enemy.flat_hit = enemy_type.get("flat_damage", false)
 	enemy.global_position = spawn_point()
 	enemy.killed.connect(_on_enemy_killed)
 	return enemy

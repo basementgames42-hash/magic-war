@@ -99,7 +99,8 @@ func _ready() -> void:
 
 # ranged = a shot or lobbed bomb: reduced by BALANCE.ranged_damage_multiplier
 # and kept out of the swarm streak (that's for being mobbed up close).
-func take_damage(amount: int, ranged: bool = false) -> void:
+# flat = costs exactly `amount` HP: no multipliers, no swarm streak (goblins).
+func take_damage(amount: int, ranged: bool = false, flat: bool = false) -> void:
 	if health <= 0:
 		return  # Already dead; several enemies can hit on the same frame
 	if super_timer > 0.0:
@@ -112,25 +113,27 @@ func take_damage(amount: int, ranged: bool = false) -> void:
 		DamageNumber.spawn(global_position, "DODGE", DamageNumber.DODGED)
 		return
 
-	# Swarm streak: rapid back-to-back melee hits hurt more and more.
-	var streak_mult: float = 1.0
-	if ranged:
-		streak_mult = BALANCE.ranged_damage_multiplier
-	else:
-		if time_since_hit <= streak_window:
-			hit_streak = mini(hit_streak + 1, max_streak)
+	var dealt: int = amount
+	if not flat:
+		# Swarm streak: rapid back-to-back melee hits hurt more and more.
+		var streak_mult: float = 1.0
+		if ranged:
+			streak_mult = BALANCE.ranged_damage_multiplier
 		else:
-			hit_streak = 0
-		time_since_hit = 0.0
-		streak_mult = 1.0 + streak_bonus * hit_streak
+			if time_since_hit <= streak_window:
+				hit_streak = mini(hit_streak + 1, max_streak)
+			else:
+				hit_streak = 0
+			time_since_hit = 0.0
+			streak_mult = 1.0 + streak_bonus * hit_streak
 
-	# Health is whole numbers, so carry the fraction over to the next hit:
-	# 1 damage x1.5 lands as 1, 2, 1, 2... instead of always rounding.
-	pending_damage += amount * damage_taken_multiplier * (1.0 + wave_damage_bonus) * streak_mult
-	# A melee hit always costs at least 1. A weak ranged hit may cost nothing
-	# yet: its fraction waits for the next hit (so half damage really is half).
-	var dealt: int = int(pending_damage) if ranged else maxi(int(pending_damage), 1)
-	pending_damage = maxf(pending_damage - dealt, 0.0)
+		# Health is whole numbers, so carry the fraction over to the next hit:
+		# 1 damage x1.5 lands as 1, 2, 1, 2... instead of always rounding.
+		pending_damage += amount * damage_taken_multiplier * (1.0 + wave_damage_bonus) * streak_mult
+		# A melee hit always costs at least 1. A weak ranged hit may cost nothing
+		# yet: its fraction waits for the next hit (so half damage really is half).
+		dealt = int(pending_damage) if ranged else maxi(int(pending_damage), 1)
+		pending_damage = maxf(pending_damage - dealt, 0.0)
 	if dealt <= 0:
 		return
 
