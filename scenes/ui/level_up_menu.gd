@@ -17,6 +17,8 @@ const EPIC_COMBO = preload("res://scenes/spells/epic_combo.gd")
 const EPIC_TINT := Color(0.78, 0.45, 1.25)  # Purple wash over an Epic choice's button
 const GOD_COMBO = preload("res://scenes/spells/god_combo.gd")
 const GOD_TINT := Color(1.0, 0.76, 0.22)   # God-Tier choices: a gold button (see paint_button)
+const GOD_SHINE = preload("res://scenes/ui/god_shine.gd")
+const FX = preload("res://scenes/spells/spell_fx.gd")
 # Weapon id -> its name, for "Frozen Tempest: Lightning Arc + Frost Nova".
 const WEAPON_NAMES: Dictionary = {
 	"lightning": "Lightning Arc", "frost": "Frost Nova", "orbit": "Arcane Orbit",
@@ -113,7 +115,11 @@ func open() -> void:
 
 	visible = true
 	get_tree().paused = true
-	Audio.play("level_up", -3.0, 0.0)
+	if god:
+		Audio.play("victory", -2.0, 0.0)
+		god_reveal.call_deferred()
+	else:
+		Audio.play("level_up", -3.0, 0.0)
 
 func epic_options() -> Array[String]:
 	# Every pair of this run's additional weapons not combined yet.
@@ -167,10 +173,22 @@ func paint_button(button: Button, tint: Variant) -> void:
 	# Epic choices get a purple wash on every state of the button. God-Tier
 	# choices are solid gold instead (tinting the blue button art toward gold
 	# just turns it green). null = the normal look.
-	for colour in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+	for fx in button.get_children():
+		if fx.is_in_group("god_fx"):
+			fx.queue_free()
+	# God-Tier text is drawn by a rich-text label on top (decorate_god), so
+	# only the title can be bold; the button's own text stays for its size,
+	# but invisible.
+	var colours: Array[String] = ["font_color", "font_hover_color", "font_pressed_color",
+		"font_focus_color", "font_outline_color"]
+	for colour in colours:
 		button.remove_theme_color_override(colour)
-		if tint == GOD_TINT:
-			button.add_theme_color_override(colour, Color(0.24, 0.13, 0.02))
+	# The regular text colours, read before they're hidden below.
+	var text_colour: Color = button.get_theme_color("font_color")
+	var outline_colour: Color = button.get_theme_color("font_outline_color")
+	if tint == GOD_TINT:
+		for colour in colours:
+			button.add_theme_color_override(colour, Color(0, 0, 0, 0))
 	for state in ["normal", "hover", "pressed", "focus"]:
 		button.remove_theme_stylebox_override(state)
 		if tint == GOD_TINT:
@@ -182,18 +200,109 @@ func paint_button(button: Button, tint: Variant) -> void:
 			elif box is StyleBoxFlat:
 				box.bg_color = box.bg_color * tint
 			button.add_theme_stylebox_override(state, box)
+	if tint == GOD_TINT:
+		decorate_god(button, text_colour, outline_colour)
 
 func gold_box(state: String) -> StyleBoxFlat:
+	# Deep burnished gold with a bright gold rim and a warm glow around it, so
+	# the regular white text reads clearly on it.
+	var gold := Color(0.78, 0.5, 0.08)
 	var box := StyleBoxFlat.new()
-	box.bg_color = {"normal": GOD_TINT, "hover": GOD_TINT.lightened(0.2),
-		"pressed": GOD_TINT.darkened(0.15), "focus": GOD_TINT.lightened(0.1)}[state]
-	box.border_color = Color(0.5, 0.3, 0.05)
+	box.bg_color = {"normal": gold, "hover": gold.lightened(0.15),
+		"pressed": gold.darkened(0.15), "focus": gold.lightened(0.08)}[state]
+	box.border_color = Color(1.0, 0.88, 0.45)
 	box.set_border_width_all(4)
-	box.set_corner_radius_all(12)
-	box.shadow_color = Color(1.0, 0.85, 0.3, 0.45)  # A soft golden glow round it
-	box.shadow_size = 6
-	box.set_content_margin_all(10)
+	box.set_corner_radius_all(14)
+	box.shadow_color = Color(1.0, 0.8, 0.25, 0.7 if state == "hover" else 0.5)
+	box.shadow_size = 14 if state == "hover" else 10
+	box.set_content_margin_all(12)
 	return box
+
+func decorate_god(button: Button, text_colour: Color, outline_colour: Color) -> void:
+	# The text on top: "GOD-TIER:" and the title in bold, the description in
+	# the same weight, size and colour as every other upgrade.
+	var choice: Dictionary = current_choices[buttons.find(button)]
+	var label := RichTextLabel.new()
+	label.add_to_group("god_fx")
+	label.bbcode_enabled = true
+	label.fit_content = false
+	label.scroll_active = false
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for side in [SIDE_LEFT, SIDE_TOP]:
+		label.set_offset(side, 12.0)
+	for side in [SIDE_RIGHT, SIDE_BOTTOM]:
+		label.set_offset(side, -12.0)
+	var font: Font = button.get_theme_font("font")
+	var bold := FontVariation.new()
+	bold.base_font = font
+	bold.variation_embolden = 0.9
+	var size: int = button.get_theme_font_size("font_size")
+	label.add_theme_font_override("normal_font", font)
+	label.add_theme_font_override("bold_font", bold)
+	label.add_theme_font_size_override("normal_font_size", size)
+	label.add_theme_font_size_override("bold_font_size", size)
+	label.add_theme_color_override("default_color", text_colour)
+	label.add_theme_color_override("font_outline_color", outline_colour)
+	label.add_theme_constant_override("outline_size", button.get_theme_constant("outline_size"))
+	label.text = "[center][b]GOD-TIER:[/b] [b]%s[/b]
+%s[/center]" % [
+		choice["name"].trim_prefix("GOD-TIER: "), describe(choice)]
+	button.add_child(label)
+	# The sparkle: a light sweep across the gold, stars on the edges and
+	# drifting golden motes.
+	for mode in ["sweep", "stars"]:
+		var shine: Control = GOD_SHINE.new()
+		shine.mode = mode
+		shine.add_to_group("god_fx")
+		button.add_child(shine)
+	var motes := CPUParticles2D.new()
+	motes.add_to_group("god_fx")
+	motes.texture = FX.glow_texture()
+	motes.material = FX.additive_material()
+	motes.amount = 18
+	motes.lifetime = 1.3
+	motes.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	motes.direction = Vector2.UP
+	motes.spread = 25.0
+	motes.gravity = Vector2(0, -40)
+	motes.initial_velocity_min = 10.0
+	motes.initial_velocity_max = 40.0
+	motes.scale_amount_min = 0.08
+	motes.scale_amount_max = 0.2
+	motes.color = Color(1.0, 0.88, 0.45)
+	motes.color_ramp = FX.fade_ramp()
+	button.add_child(motes)
+	# Placed once the button has its real size.
+	(func():
+		motes.position = button.size * 0.5
+		motes.emission_rect_extents = button.size * 0.5).call_deferred()
+
+func god_reveal() -> void:
+	# The God-Tier pop-up: the ribbon bounces in, golden sparks burst from
+	# it, and the three choices drop in one after another.
+	var heading: Label = get_node_or_null("CenterContainer/VBoxContainer/TitleLabel")
+	if heading:
+		heading.pivot_offset = heading.size * 0.5
+		heading.scale = Vector2.ONE * 1.8
+		var h := create_tween()
+		h.tween_property(heading, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		var at := Vector2(get_viewport().get_visible_rect().size.x * 0.5,
+			heading.global_position.y + heading.size.y * 0.5)  # Centre of the ribbon
+		for color in [Color(1.0, 0.85, 0.35), Color.WHITE, Color(1.0, 0.6, 0.2)]:
+			FX.burst(self, at, color, 28, 460.0, 0.9, 0.45)
+	for i in buttons.size():
+		var b: Button = buttons[i]
+		b.pivot_offset = b.size * 0.5
+		b.scale = Vector2.ONE * 0.6
+		b.modulate.a = 0.0
+		var t := create_tween()
+		t.tween_interval(0.2 + 0.14 * i)
+		t.tween_property(b, "modulate:a", 1.0, 0.15)
+		t.parallel().tween_property(b, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		t.tween_callback(func(): FX.burst(self, b.global_position + b.size * 0.5, Color(1.0, 0.85, 0.35), 14, 320.0, 0.6, 0.3))
 
 func is_new_weapon(choice: Dictionary) -> bool:
 	# A spell unlock, or a level-up weapon the player doesn't have yet.

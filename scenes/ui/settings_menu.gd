@@ -1,7 +1,8 @@
 extends CanvasLayer
 # Settings Menu: opened with Esc from any screen, or the title screen's
-# Settings button. Shows the fullscreen and damage-number toggles, volume
-# sliders and the keyboard shortcuts.
+# Settings button. Shows the damage-number toggle and the volume sliders.
+# (Fullscreen still works with F11 / Alt+Enter / the maximize button, run by
+# the WindowControls autoload; it just has no button here.)
 # Pauses the game while open, and puts the pause state back exactly as it
 # was on close (so the level-up / game-over screens stay paused).
 # Created by the WindowControls autoload, which is our parent.
@@ -11,11 +12,8 @@ const GAME_SCENE := "res://scenes/main.tscn"
 
 var was_paused: bool = false
 
-@onready var controls: Node = get_parent()
-
 func _ready() -> void:
 	visible = false
-	%FullscreenButton.pressed.connect(_on_fullscreen_pressed)
 	%DamageNumbersButton.pressed.connect(_on_damage_numbers_pressed)
 	%ResumeButton.pressed.connect(close)
 	%MainMenuButton.pressed.connect(_on_main_menu_pressed)
@@ -24,8 +22,6 @@ func _ready() -> void:
 	%SfxSlider.value = Audio.get_volume("SFX")
 	%MusicSlider.value_changed.connect(_on_music_changed)
 	%SfxSlider.value_changed.connect(_on_sfx_changed)
-	# Fullscreen can also change via F11 / maximize while we're open.
-	get_tree().root.size_changed.connect(refresh)
 
 func toggle() -> void:
 	if visible:
@@ -42,9 +38,6 @@ func open() -> void:
 	%ResumeButton.text = "Resume" if %MainMenuButton.visible else "Close"
 	$CenterContainer/VBoxContainer/TitleLabel.text = \
 		"PAUSED" if %MainMenuButton.visible else "SETTINGS"
-	# Keyboard shortcuts mean nothing on a phone.
-	$CenterContainer/VBoxContainer/Panel/VBoxContainer/Shortcuts.visible = \
-		not DisplayServer.is_touchscreen_available()
 	refresh()
 	fit_to_screen()
 	visible = true
@@ -66,24 +59,6 @@ func close() -> void:
 
 func refresh() -> void:
 	%DamageNumbersButton.text = "Damage Numbers: %s" % ("On" if GameData.show_damage_numbers else "Off")
-	# When played inside the editor's Game tab, the game is embedded in the
-	# editor and can't change its own window — say so instead of a dead button.
-	if controls.is_embedded():
-		%FullscreenButton.text = "Fullscreen: not in editor"
-		%FullscreenButton.disabled = true
-		return
-	# iPhone Safari blocks fullscreen for web pages entirely; the only way is
-	# to install the game to the Home Screen, so explain that instead.
-	if OS.has_feature("web_ios") and not controls.is_fullscreen():
-		%FullscreenButton.text = "Full screen: Share > Add to Home Screen"
-		%FullscreenButton.disabled = true
-		return
-	%FullscreenButton.disabled = false
-	%FullscreenButton.text = "Fullscreen: %s" % ("On" if controls.is_fullscreen() else "Off")
-
-func _on_fullscreen_pressed() -> void:
-	controls.set_fullscreen(not controls.is_fullscreen())
-	refresh.call_deferred()
 
 func _on_damage_numbers_pressed() -> void:
 	# Floating hit numbers over the player and enemies. Saved straight away,

@@ -15,11 +15,12 @@ extends Node
 #     make_bus() is only a fallback if that file goes missing.
 #   - Every button in the game clicks automatically (see _on_node_added).
 #   - Web: browsers won't play any sound until the player first taps, clicks
-#     or presses a key on the page (an autoplay rule no game can override).
-#     Godot starts the audio on that first input; until then a small "Tap
-#     anywhere for sound" hint shows on whatever screen is up. iPhones (iOS
-#     17+) are also told this is game audio, so the silent switch doesn't
-#     mute it.
+#     or presses a key on the page (an autoplay rule no game can override);
+#     the music is already running, so it's heard from that first touch.
+#     The page itself (export_presets.cfg, html/head_include) pauses all
+#     audio whenever the game is hidden: another tab, app switch, locked
+#     phone. Don't set iOS's audioSession to "playback": that's the
+#     music-app mode that keeps playing in the background.
 
 const SFX_DIR := "res://audio/sfx/"
 const MUSIC_DIR := "res://audio/music/"
@@ -48,59 +49,6 @@ func _ready() -> void:
 	music_a = make_music_player()
 	music_b = make_music_player()
 	get_tree().node_added.connect(_on_node_added)
-	if OS.has_feature("web"):
-		# iOS 17+: play like a music app, even with the ringer switched off.
-		JavaScriptBridge.eval("if (navigator.audioSession) navigator.audioSession.type = 'playback';")
-		if not web_sound_allowed():
-			show_tap_hint()
-
-# ---------- WEB: SOUND BEFORE THE FIRST TAP ----------
-
-var tap_hint: CanvasLayer
-
-func web_sound_allowed() -> bool:
-	# Asks the browser directly: a fresh audio context starts "suspended"
-	# while sound is blocked and "running" once it's allowed (some browsers
-	# never block at all). The probe is closed at once.
-	return JavaScriptBridge.eval("""(() => {
-		try {
-			const Ctx = window.AudioContext || window.webkitAudioContext;
-			if (!Ctx) return true;
-			const probe = new Ctx();
-			const running = probe.state === 'running';
-			probe.close();
-			return running;
-		} catch (e) { return true; }
-	})()""", true)
-
-func show_tap_hint() -> void:
-	tap_hint = CanvasLayer.new()
-	tap_hint.layer = 120  # Above every screen and menu
-	add_child(tap_hint)
-	var label := Label.new()
-	label.text = "Tap anywhere for sound"
-	label.add_theme_font_size_override("font_size", 22)
-	label.add_theme_constant_override("outline_size", 8)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# Top-right corner: clear of the loading screen's bar and tips, and of
-	# every menu (by the time a run starts, the player has tapped anyway).
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	label.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	label.offset_left = -360.0
-	label.offset_right = -16.0
-	label.offset_top = 12.0
-	label.offset_bottom = 44.0
-	tap_hint.add_child(label)
-	var pulse := label.create_tween().set_loops()
-	pulse.tween_property(label, "modulate:a", 0.35, 0.8).set_trans(Tween.TRANS_SINE)
-	pulse.tween_property(label, "modulate:a", 1.0, 0.8).set_trans(Tween.TRANS_SINE)
-
-func _input(event: InputEvent) -> void:
-	# The first real tap/click/key unlocks the sound: drop the hint.
-	if tap_hint and (event is InputEventMouseButton or event is InputEventScreenTouch \
-			or event is InputEventKey) and event.is_pressed() and web_sound_allowed():
-		tap_hint.queue_free()
-		tap_hint = null
 
 func make_bus(bus_name: String, volume_db: float) -> void:
 	if AudioServer.get_bus_index(bus_name) != -1:
