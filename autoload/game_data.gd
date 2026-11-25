@@ -75,10 +75,16 @@ var meta_upgrades: Dictionary = {
 # replacement, if it has one.
 const MAX_UPGRADE_LEVEL: int = 10
 
-func _ready() -> void:
+var loaded: bool = false  # No saving until the save has been read (see save_game)
+
+func _init() -> void:
+	# Read the save location as early as possible: test scripts start before
+	# _ready runs, and must never touch the real save.
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--save-file="):
 			save_path = arg.trim_prefix("--save-file=")
+
+func _ready() -> void:
 	for entry in Characters.ROSTER:
 		if not entry.has("unlock"):
 			unlocked_characters.append(entry["id"])  # Starters
@@ -384,6 +390,11 @@ func reset_upgrades() -> int:
 	return refund
 
 func save_game() -> void:
+	# Saving before the save is loaded would write default progress over the
+	# player's real one, so it's refused.
+	if not loaded:
+		push_warning("GameData: save_game() before load_game(), skipped")
+		return
 	var data: Dictionary = {
 		"coins": coins,
 		"meta_upgrades": meta_upgrades,
@@ -408,6 +419,7 @@ func save_game() -> void:
 	# File closes automatically when `file` goes out of scope.
 
 func load_game() -> void:
+	loaded = true
 	if not FileAccess.file_exists(save_path):
 		return  # First launch — keep defaults.
 	var file := FileAccess.open(save_path, FileAccess.READ)
