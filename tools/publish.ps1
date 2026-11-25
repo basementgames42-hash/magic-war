@@ -44,6 +44,10 @@ Write-Host "== Zipping for itch.io..."
 Compress-Archive -Path build\web\* -DestinationPath build\magic-war-web.zip -Force
 
 Write-Host "== Committing and pushing..."
+# git prints normal progress ("To https://github.com/...") on stderr, which
+# Windows PowerShell turns into an error under "Stop" even when git
+# succeeded. So from here, judge git by its exit code only.
+$ErrorActionPreference = "Continue"
 git add -A
 git diff --cached --quiet
 if ($LASTEXITCODE -eq 0) {
