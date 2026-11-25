@@ -37,12 +37,15 @@ static func web_test_ads_requested() -> bool:
 func is_available() -> bool:
 	return enabled
 
-func show_rewarded(finished: Callable) -> void:
+var series: String = ""  # e.g. "Ad 1 of 2", shown on the test ad
+
+func show_rewarded(finished: Callable, series_text: String = "") -> void:
 	# Calls finished(rewarded: bool) once the ad closes. The game stays paused
 	# until then, and goes back to how it was (so a menu behind it stays up).
 	if showing:
 		return
 	showing = true
+	series = series_text
 	on_finished = finished
 	was_paused = get_tree().paused
 	get_tree().paused = true
@@ -82,7 +85,8 @@ func _process(delta: float) -> void:
 	if test_ad == null:
 		return
 	test_timer -= delta
-	test_label.text = "TEST AD\nReward in %d..." % ceili(test_timer)
+	test_label.text = "TEST AD%s\nReward in %d..." % [
+		("  (" + series + ")") if series != "" else "", ceili(test_timer)]
 	if test_timer <= 0.0:
 		close_test_ad(true)
 

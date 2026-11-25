@@ -123,5 +123,8 @@ func set_volume(bus_name: String, linear: float) -> void:
 # ---------- AUTOMATIC BUTTON CLICKS ----------
 
 func _on_node_added(node: Node) -> void:
-	if node is BaseButton:
+	# Every button clicks. A button moved to a new parent is "added" again,
+	# so only connect the first time.
+	if node is BaseButton and not node.has_meta("click_sound"):
+		node.set_meta("click_sound", true)
 		node.pressed.connect(play.bind("ui_click", -4.0, 0.0))

@@ -39,11 +39,13 @@ func _ready() -> void:
 	column.add_child(body)
 	chance_button = Button.new()
 	chance_button.custom_minimum_size = Vector2(400, 72)
+	chance_button.icon = ShopUI.icon("potion_round_gold", 40)
 	chance_button.pressed.connect(_on_answer.bind(chance_used))
 	column.add_child(chance_button)
 	watch_button = Button.new()
 	watch_button.text = "Watch Ad & Continue"
 	watch_button.custom_minimum_size = Vector2(400, 72)
+	watch_button.icon = ShopUI.icon("crystal_ball", 40)
 	watch_button.pressed.connect(_on_answer.bind(accepted))
 	column.add_child(watch_button)
 	var give_up := Button.new()

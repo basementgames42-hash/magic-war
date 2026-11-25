@@ -196,6 +196,23 @@ func buy_coin_chest() -> bool:
 	gems_changed.emit(gems)
 	return true
 
+func buy_gem_with_coins() -> bool:
+	var ex: Dictionary = ShopCatalog.GEM_EXCHANGE
+	if coins < ex["coins"]:
+		return false
+	coins -= ex["coins"]
+	add_gems(ex["gems"])  # Saves
+	return true
+
+func add_stock(id: String) -> bool:
+	# A free consumable (ad reward). False if already holding the most.
+	var item: Dictionary = ShopCatalog.consumable(id)
+	if item.is_empty() or stock_count(id) >= item.get("max", 99):
+		return false
+	stock[id] = stock_count(id) + 1
+	save_game()
+	return true
+
 func second_chances() -> int:
 	# Revives that need no ad: Phoenix Feather's free one, then bought ones.
 	return stock_count("second_chance") + (1 if free_revive else 0)
