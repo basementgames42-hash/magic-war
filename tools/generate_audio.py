@@ -315,62 +315,6 @@ def title_music():
     return finish(wrap_loop(mix, loop_len), 0.7)
 
 
-def loading_music():
-    """Loading-screen loop: the calm before the battle. 100 BPM, 8 bars
-    (~19 s). A low drone and war-drum heartbeat, a lute arpeggio that climbs
-    each bar, and a horn call over the second half. D minor, like the rest."""
-    bpm = 100
-    beat = 60.0 / bpm
-    bar = beat * 4
-    chords = [DM, DM, BB, C, DM, BB, GM, A]
-    horn = [  # (beat in bar, length in beats, MIDI note) for bars 5-8
-        [(0, 1.5, 62), (1.5, .5, 65), (2, 2, 69)],
-        [(0, 1.5, 70), (1.5, .5, 69), (2, 2, 65)],
-        [(0, 1.5, 67), (1.5, .5, 70), (2, 2, 74)],
-        [(0, 3, 73), (3, 1, 69)],
-    ]
-    drone, drums, lute, brass = [], [], [], []
-    for b in range(8):
-        t0 = b * bar
-        chord = chords[b]
-        root = chord[0] - 24
-        # Drone: root + fifth, slow swell.
-        for n in (root, root + 7):
-            mix_into(drone, tone(midi(n), bar, "saw", 0.5, attack=0.5, release=0.5), t0)
-        # War drums: a heartbeat (boom-boom ... boom), toms rolling in bar 8.
-        for k, v in ((0, 1.0), (0.5, 0.7), (2, 0.9)):
-            mix_into(drums, tom(38, v), t0 + k * beat)
-        if b % 2:
-            mix_into(drums, kick(0.6), t0 + 3 * beat)
-        if b == 7:
-            for j, n in enumerate([45, 43, 41, 40, 38, 36]):
-                mix_into(drums, tom(n, 0.6 + j * 0.06), t0 + (2.5 + j * 0.25) * beat)
-        # Lute: climbing sixteenths, brighter in the second half.
-        tones_ = [chord[0] + 12, chord[1] + 12, chord[2] + 12, chord[0] + 24,
-                  chord[1] + 24, chord[2] + 24]
-        steps = 8 if b < 4 else 16
-        for i in range(steps):
-            n = tones_[min(i * len(tones_) // steps, len(tones_) - 1)]
-            mix_into(lute, pluck(midi(n), beat * 1.5, 0.45), t0 + i * bar / steps)
-        # Horn call (soft, filtered saw doubled by a triangle) in bars 5-8.
-        if b >= 4:
-            for (start, length, n) in horn[b - 4]:
-                dur = length * beat * 0.95
-                note = tone(midi(n), dur, "saw", 0.45, attack=0.06, decay=0.3, sustain=0.7,
-                            release=0.15, vibrato=0.005)
-                mix_into(note, tone(midi(n - 12), dur, "tri", 0.4, attack=0.06, release=0.15))
-                mix_into(brass, note, t0 + start * beat)
-    loop_len = 8 * bar
-    drone = lowpass(drone, 600)
-    brass = echo(lowpass(brass, 1800), beat * 0.75, 0.3, 0.3)
-    lute = echo(lowpass(lute, 3800), beat * 0.5, 0.25, 0.2)
-    mix = []
-    for part, gain in ((drone, 0.16), (drums, 0.38), (lute, 0.26), (brass, 0.2)):
-        mix_into(mix, part, 0, gain)
-    mix = room(mix, 0.3)
-    return finish(wrap_loop(mix, loop_len), 0.75)
-
-
 def boss_music():
     """Boss fight loop: urgent and heavy. 156 BPM, 16 bars (~25 s). Pounding
     drums, a low brass ostinato, a screaming lead in the second half. Same
@@ -579,9 +523,8 @@ def sfx_ui_click():
 if __name__ == "__main__":
     import sys
     # Newer sounds can be written on their own, leaving every other file
-    # untouched:  python tools/generate_audio.py loading boss boss_warning
+    # untouched:  python tools/generate_audio.py boss boss_warning
     singles = {
-        "loading": lambda: write_wav(os.path.join(OUT, "music", "loading.wav"), loading_music(), loop=True),
         "boss": lambda: write_wav(os.path.join(OUT, "music", "boss.wav"), boss_music(), loop=True),
         "boss_warning": lambda: write_wav(os.path.join(OUT, "sfx", "boss_warning.wav"), sfx_boss_warning()),
     }
