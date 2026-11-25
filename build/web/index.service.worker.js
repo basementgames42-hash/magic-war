@@ -4,7 +4,7 @@
 // cache) and the fresh copy is stored for offline use. Offline: the last
 // stored copy is served. A new export changes CACHE_VERSION, which makes the
 // browser install this worker again; it takes over immediately.
-const CACHE_VERSION = '1795582082|5114149';
+const CACHE_VERSION = '1795583613|4862034';
 const CACHE_PREFIX = 'Magic War-sw-cache-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 const OFFLINE_URL = 'index.offline.html';
