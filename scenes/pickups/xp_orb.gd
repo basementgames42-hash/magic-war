@@ -17,7 +17,6 @@ var player: Node2D = null
 var attracted: bool = false   # Set by the magnet pickup: fly in from any distance
 
 var age: float = 0.0
-var glow: Sprite2D = null
 # The orb is drawn ONCE into these child nodes and animated only by moving,
 # scaling and rotating them (cheap), instead of redrawing ~10 shapes every
 # frame, which made a few hundred orbs slow on the web.
@@ -34,9 +33,10 @@ func _ready() -> void:
 
 	# Random start point so a pile of orbs doesn't pulse in lockstep.
 	age = randf() * TAU
-	glow = FX.glow_sprite(Color(0.3, 1.0, 0.8, 0.6), 46.0)
-	glow.show_behind_parent = true
-	add_child(glow)
+	# All orbs on one draw layer, drawn with plain shapes only (the halo too,
+	# no special blend), so the renderer can batch a whole field of orbs
+	# into a few draw calls instead of two or more per orb.
+	z_index = -1
 	look = Node2D.new()
 	add_child(look)
 	var body := Node2D.new()
@@ -56,9 +56,6 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	age += delta
 	var bob: float = sin(age * 3.0) * 2.5
-	# The halo breathes along with the sphere and bobs with it.
-	glow.scale = Vector2.ONE * (46.0 / 64.0) * (1.0 + sin(age * 4.0) * 0.15)
-	glow.position.y = bob
 	look.position.y = bob
 	look.scale = Vector2.ONE * (1.0 + sin(age * 4.0) * 0.06)
 	core.rotation = age * 5.0
@@ -67,7 +64,10 @@ func _process(delta: float) -> void:
 const R: float = 8.0
 
 func _draw_body(n: Node2D) -> void:
-	# Sphere = thin rim, emerald body, lighter inner layer, glassy highlight.
+	# Soft halo, then the sphere: thin rim, emerald body, lighter inner
+	# layer, glassy highlight.
+	n.draw_circle(Vector2.ZERO, R * 2.6, Color(0.3, 1.0, 0.8, 0.08))
+	n.draw_circle(Vector2.ZERO, R * 1.8, Color(0.3, 1.0, 0.8, 0.14))
 	n.draw_circle(Vector2.ZERO, R + 1.0, Color(0.05, 0.4, 0.35, 0.9))
 	n.draw_circle(Vector2.ZERO, R, Color(0.15, 0.85, 0.65))
 	n.draw_circle(Vector2(0.0, 0.8), R * 0.72, Color(0.45, 1.0, 0.8))

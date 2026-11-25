@@ -30,6 +30,9 @@ extends Resource
 @export_range(0.0, 0.2, 0.01) var spawn_rate_per_player_level: float = 0.03
 ## Spawning pauses at this many living enemies, so late runs stay playable.
 @export_range(50, 1000, 10) var max_enemies: int = 250
+## The same cap in the Web build, lower because browsers (phones most of all)
+## run the game several times slower than the desktop app.
+@export_range(50, 1000, 10) var max_enemies_web: int = 200
 ## Extra normal enemy health per full minute of the run.
 @export_range(0, 20) var enemy_health_per_minute: int = 2
 ## Extra elite health per full minute of the run.

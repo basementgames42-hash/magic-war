@@ -12,7 +12,8 @@ const BALANCE: Balance = preload("res://config/balance.tres")
 
 enum State { WAITING, OFFERING, WATCHING, ACTIVE, REWARD }
 
-const CARD_SIZE := Vector2(320, 96)
+const CARD_SIZE := Vector2(340, 96)
+const TEXT_X: float = 86.0
 const HOME := Vector2(14, 156)
 const GOLD := Color(1.0, 0.82, 0.32)
 const INK := Color(0.09, 0.11, 0.2, 0.94)
@@ -131,10 +132,22 @@ func text_label(font_size: int, color: Color, at: Vector2) -> Label:
 	card.add_child(l)
 	return l
 
+func fit(label: Label, text: String, base_size: int, width: float) -> void:
+	# Shrinks the font until the text fits beside the play button, so nothing
+	# runs under it whatever the language or font.
+	label.text = text
+	var font: Font = label.get_theme_font("font")
+	var size: int = base_size
+	while size > 11 and font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > width:
+		size -= 1
+	label.add_theme_font_size_override("font_size", size)
+
 func show_card(eyebrow_text: String, title_text: String, detail_text: String, clickable: bool) -> void:
-	eyebrow.text = eyebrow_text
-	title.text = title_text
-	detail.text = detail_text
+	# Text stops short of the play button (or the card's edge without it).
+	var width: float = (cta.position.x - 8.0 if clickable else CARD_SIZE.x - 14.0) - TEXT_X
+	fit(eyebrow, eyebrow_text, 13, width)
+	fit(title, title_text, 21, width)
+	fit(detail, detail_text, 15, width)
 	icon.texture = ShopUI.icon(offer["icon"], 52)
 	card.disabled = not clickable
 	cta.visible = clickable
@@ -187,7 +200,7 @@ func _process(delta: float) -> void:
 				wait_for_next_offer()
 				hide_card()
 		State.ACTIVE:
-			detail.text = "%ds left" % ceili(maxf(timer, 0.0))
+			detail.text = "%ds left" % ceili(maxf(timer, 0.0))  # Short: always fits
 			if timer <= 0.0:
 				GameData.active_boost = ""
 				wait_for_next_offer()
@@ -269,7 +282,7 @@ func give_reward() -> void:
 	timer = 2.5
 	var got: String = {"stock": "Ready for when you fall", "effect": "Working for the rest of this run",
 		"gems": "Added to your gems"}[offer["kind"]]
-	show_card("REWARD!", offer_title(offer).trim_prefix("Free "), got, false)
+	show_card("REWARD!", offer_title(offer), got, false)
 	celebrate()
 
 func celebrate() -> void:

@@ -17,6 +17,7 @@ var age: float = 0.0
 
 func _ready() -> void:
 	add_to_group("coins")
+	z_index = -2  # All coins on one draw layer, so they batch together
 	# Reach shop upgrade: fly in from farther away.
 	magnet_range *= 1.0 + BALANCE.pickup_range_per_level * GameData.meta_upgrades["pickup_range"]
 	player = get_tree().get_first_node_in_group("player")

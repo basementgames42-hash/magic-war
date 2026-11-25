@@ -114,11 +114,30 @@ func _ready() -> void:
 	if ai in FLIERS:
 		collision_mask = 0
 	anim.play("run")
+	brain = Callable(self, "brain_" + ai)  # Looked up once, not every frame
+	lod_phase = randi() % LOD_STEP          # Spreads far-away updates over frames
+
+# Far off screen, nobody sees an enemy, so it only thinks and moves every
+# LOD_STEP-th physics tick (with the time saved up) and skips collisions.
+# Main sets far_distance from the camera's view. Saves a lot with big crowds.
+const LOD_STEP: int = 3
+static var far_distance: float = 1100.0
+static var lod_tick: int = 0  # Advanced once per physics tick by Main
+var lod_phase: int = 0
+var lod_time: float = 0.0
+var brain: Callable
 
 func _physics_process(delta: float) -> void:
 	if player == null:
 		return
 	var to_player: Vector2 = player.global_position - global_position
+	var far: bool = not is_boss and to_player.length_squared() > far_distance * far_distance
+	if far:
+		lod_time += delta
+		if lod_tick % LOD_STEP != lod_phase:
+			return
+		delta = lod_time
+	lod_time = 0.0
 	ai_clock += delta
 	ai_timer -= delta
 	shot_timer -= delta
@@ -132,7 +151,7 @@ func _physics_process(delta: float) -> void:
 			anim.modulate = Color.WHITE
 	speed_factor = 1.0
 	can_bite = true
-	var direction: Vector2 = call("brain_" + ai, to_player)
+	var direction: Vector2 = brain.call(to_player)
 
 	# Walk around buildings/trees: if we're pressed against one and still
 	# heading into it, steer along its edge instead. move_and_slide alone
@@ -143,6 +162,11 @@ func _physics_process(delta: float) -> void:
 		direction = (along + direction * 0.25).normalized()
 
 	velocity = direction * move_speed * speed_multiplier * speed_factor
+	if far:
+		# Off screen: just walk (no collisions), and nothing else to do.
+		global_position += velocity * delta
+		wall_normal = Vector2.ZERO
+		return
 	move_and_slide()
 
 	# Remember the obstacle we touched this frame (if any) for next frame.
@@ -726,7 +750,7 @@ func drop_chances() -> Dictionary:
 			+ BALANCE.get(luck[1]) * GameData.meta_upgrades[luck[0]]) * GameData.boost_factor("drops")
 	return chances
 
-const MAX_LOOSE_PICKUPS: int = 120  # Orbs (and, separately, coins) before drops merge
+const MAX_LOOSE_PICKUPS: int = 60  # Orbs (and, separately, coins) before drops merge
 
 func die(drop_pickup: bool = true) -> void:
 	if is_queued_for_deletion():

@@ -5,6 +5,7 @@ extends Node2D
 const ENEMY_SCENE: PackedScene = preload("res://scenes/enemies/enemy.tscn")
 const BALANCE: Balance = preload("res://config/balance.tres")
 const REVIVE_OFFER = preload("res://scenes/ui/revive_offer.gd")
+const ENEMY_SCRIPT = preload("res://scenes/enemies/enemy.gd")
 const BOOST_OFFER = preload("res://scenes/ui/boost_offer.gd")
 const UNLOCK_TOAST = preload("res://scenes/ui/unlock_toast.gd")
 const BOSS_HUD = preload("res://scenes/ui/boss_hud.gd")
@@ -95,6 +96,15 @@ func _ready() -> void:
 	camera.limit_right = edge
 	camera.limit_bottom = edge
 	update_clock()  # 05:00 from the first frame, not the scene's 00:00
+
+func _physics_process(_delta: float) -> void:
+	# Far-away enemies update in turns (see enemy.gd LOD). The view's half
+	# diagonal plus a margin counts as "far", whatever the screen shape.
+	ENEMY_SCRIPT.lod_tick += 1
+	if ENEMY_SCRIPT.lod_tick % 30 == 0:
+		var camera: Camera2D = player.get_node("Camera2D") if player else null
+		if camera:
+			ENEMY_SCRIPT.far_distance = (get_viewport_rect().size / camera.zoom).length() * 0.5 + 250.0
 
 func _process(delta: float) -> void:
 	if run_over:
@@ -429,7 +439,7 @@ func open_spot_near(center: Vector2, distance: float) -> Vector2:
 	return pos
 
 func _on_spawn_timer_timeout() -> void:
-	if run_over or get_tree().get_node_count_in_group("enemies") >= BALANCE.max_enemies:
+	if run_over or get_tree().get_node_count_in_group("enemies") >= enemy_cap():
 		return
 	spawn_enemy()
 
@@ -474,6 +484,9 @@ func make_enemy() -> CharacterBody2D:
 	enemy.global_position = spawn_point()
 	enemy.killed.connect(_on_enemy_killed)
 	return enemy
+
+static func enemy_cap() -> int:
+	return BALANCE.max_enemies_web if OS.has_feature("web") else BALANCE.max_enemies
 
 func spawn_enemy() -> void:
 	if player == null:

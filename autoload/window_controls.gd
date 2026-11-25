@@ -30,6 +30,11 @@ var mobile: bool = OS.has_feature("mobile") or OS.has_feature("web_android") \
 func _ready() -> void:
 	# Keep working while the game is paused (level-up / game-over screens).
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# Browsers on 90/120 Hz screens (most new phones) ask for a frame every
+	# refresh: twice the work, with physics only every other frame, which
+	# feels juddery. 60 fps is plenty here and paces evenly.
+	if OS.has_feature("web"):
+		Engine.max_fps = 60
 	get_tree().root.size_changed.connect(_on_window_resized)
 	settings = SETTINGS_SCENE.instantiate()
 	add_child(settings)

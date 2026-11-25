@@ -62,10 +62,10 @@ const AD_OFFERS: Array[Dictionary] = [
 	{"id": "gold", "kind": "boost", "icon": "coin_stack", "title": "Double Gold", "detail": "x2 gold for %ds"},
 	{"id": "xp", "kind": "boost", "icon": "potion_bottle_green", "title": "Double EXP", "detail": "x2 EXP for %ds"},
 	{"id": "drops", "kind": "boost", "icon": "chest_wood", "title": "Double Drops", "detail": "x2 item drops for %ds"},
-	{"id": "second_chance", "kind": "stock", "icon": "potion_round_gold", "title": "Free Second Chance", "detail": "Revive once, no ad needed"},
-	{"id": "elixir", "kind": "effect", "icon": "potion_flask_amber", "title": "Free Battle Elixir", "detail": "+25% damage this run"},
-	{"id": "charm", "kind": "effect", "icon": "clover", "title": "Free Lucky Charm", "detail": "+50% gold this run"},
-	{"id": "tome", "kind": "effect", "icon": "book_blue", "title": "Free Wisdom Tome", "detail": "+50% EXP this run"},
+	{"id": "second_chance", "kind": "stock", "icon": "potion_round_gold", "title": "Second Chance", "detail": "Revive once when you fall"},
+	{"id": "elixir", "kind": "effect", "icon": "potion_flask_amber", "title": "Battle Elixir", "detail": "+25% damage this run"},
+	{"id": "charm", "kind": "effect", "icon": "clover", "title": "Lucky Charm", "detail": "+50% gold this run"},
+	{"id": "tome", "kind": "effect", "icon": "book_blue", "title": "Wisdom Tome", "detail": "+50% EXP this run"},
 	{"id": "gems", "kind": "gems", "icon": "diamond", "title": "+%d Gems", "detail": "Watch %d short ads", "gems": 10, "ads": 2},
 ]
 const GEM_OFFERS_PER_RUN: int = 2  # The gem offer comes up at most this often in one run
