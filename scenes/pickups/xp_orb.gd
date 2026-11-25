@@ -18,6 +18,12 @@ var attracted: bool = false   # Set by the magnet pickup: fly in from any distan
 
 var age: float = 0.0
 var glow: Sprite2D = null
+# The orb is drawn ONCE into these child nodes and animated only by moving,
+# scaling and rotating them (cheap), instead of redrawing ~10 shapes every
+# frame, which made a few hundred orbs slow on the web.
+var look: Node2D      # Bob + pulse
+var core: Node2D      # Swirl, spins
+var twinkle: Node2D   # Rim sparkle, fades in and out
 
 func _ready() -> void:
 	# Reach shop upgrade: fly in from farther away.
@@ -31,45 +37,52 @@ func _ready() -> void:
 	glow = FX.glow_sprite(Color(0.3, 1.0, 0.8, 0.6), 46.0)
 	glow.show_behind_parent = true
 	add_child(glow)
+	look = Node2D.new()
+	add_child(look)
+	var body := Node2D.new()
+	body.draw.connect(_draw_body.bind(body))
+	look.add_child(body)
+	core = Node2D.new()
+	core.draw.connect(_draw_core.bind(core))
+	look.add_child(core)
+	twinkle = Node2D.new()
+	twinkle.position = Vector2(8.0 * 0.6, -8.0 * 0.65)
+	twinkle.draw.connect(_draw_twinkle.bind(twinkle))
+	look.add_child(twinkle)
+	# Merged orbs (worth more) are a little bigger.
+	if xp_value > 1:
+		scale = Vector2.ONE * minf(1.0 + 0.12 * (xp_value - 1), 1.8)
 
 func _process(delta: float) -> void:
 	age += delta
+	var bob: float = sin(age * 3.0) * 2.5
 	# The halo breathes along with the sphere and bobs with it.
-	var pulse: float = 1.0 + sin(age * 4.0) * 0.15
-	glow.scale = Vector2.ONE * (46.0 / 64.0) * pulse
-	glow.position.y = _bob()
-	queue_redraw()  # Redraw every frame so the core swirls
+	glow.scale = Vector2.ONE * (46.0 / 64.0) * (1.0 + sin(age * 4.0) * 0.15)
+	glow.position.y = bob
+	look.position.y = bob
+	look.scale = Vector2.ONE * (1.0 + sin(age * 4.0) * 0.06)
+	core.rotation = age * 5.0
+	twinkle.modulate.a = clampf(sin(age * 2.3) * 3.0 - 2.0, 0.0, 1.0)
 
-func _bob() -> float:
-	return sin(age * 3.0) * 2.5
+const R: float = 8.0
 
-func _draw() -> void:
-	var c := Vector2(0.0, _bob())
-	var pulse: float = 1.0 + sin(age * 4.0) * 0.06
-	var r: float = 8.0 * pulse
+func _draw_body(n: Node2D) -> void:
+	# Sphere = thin rim, emerald body, lighter inner layer, glassy highlight.
+	n.draw_circle(Vector2.ZERO, R + 1.0, Color(0.05, 0.4, 0.35, 0.9))
+	n.draw_circle(Vector2.ZERO, R, Color(0.15, 0.85, 0.65))
+	n.draw_circle(Vector2(0.0, 0.8), R * 0.72, Color(0.45, 1.0, 0.8))
+	n.draw_circle(Vector2.ZERO, R * 0.22, Color(0.95, 1.0, 0.95))
+	n.draw_circle(Vector2(-R * 0.38, -R * 0.4), R * 0.2, Color(1, 1, 1, 0.85))
 
-	# Sphere = thin rim, emerald body, lighter inner layer.
-	draw_circle(c, r + 1.0, Color(0.05, 0.4, 0.35, 0.9))
-	draw_circle(c, r, Color(0.15, 0.85, 0.65))
-	draw_circle(c + Vector2(0.0, 0.8), r * 0.72, Color(0.45, 1.0, 0.8))
-
+func _draw_core(n: Node2D) -> void:
 	# Swirling core: two arcs of light chasing each other around.
-	var spin: float = age * 5.0
-	draw_arc(c, r * 0.45, spin, spin + PI * 0.8, 10, Color(0.85, 1.0, 0.9, 0.9), 1.4)
-	draw_arc(c, r * 0.45, spin + PI, spin + PI * 1.8, 10, Color(0.85, 1.0, 0.9, 0.9), 1.4)
-	draw_circle(c, r * 0.22, Color(0.95, 1.0, 0.95))
+	n.draw_arc(Vector2.ZERO, R * 0.45, 0.0, PI * 0.8, 10, Color(0.85, 1.0, 0.9, 0.9), 1.4)
+	n.draw_arc(Vector2.ZERO, R * 0.45, PI, PI * 1.8, 10, Color(0.85, 1.0, 0.9, 0.9), 1.4)
 
-	# Glassy highlight, upper-left.
-	draw_circle(c + Vector2(-r * 0.38, -r * 0.4), r * 0.2, Color(1, 1, 1, 0.85))
-
-	# Occasional four-point twinkle on the rim.
-	var twinkle: float = clampf(sin(age * 2.3) * 3.0 - 2.0, 0.0, 1.0)
-	if twinkle > 0.0:
-		var t := c + Vector2(r * 0.6, -r * 0.65)
-		var s: float = 3.5 * twinkle
-		var col := Color(1, 1, 1, twinkle)
-		draw_line(t - Vector2(s, 0), t + Vector2(s, 0), col, 1.0)
-		draw_line(t - Vector2(0, s), t + Vector2(0, s), col, 1.0)
+func _draw_twinkle(n: Node2D) -> void:
+	var s: float = 3.5
+	n.draw_line(Vector2(-s, 0), Vector2(s, 0), Color.WHITE, 1.0)
+	n.draw_line(Vector2(0, -s), Vector2(0, s), Color.WHITE, 1.0)
 
 func _physics_process(delta: float) -> void:
 	if player == null:

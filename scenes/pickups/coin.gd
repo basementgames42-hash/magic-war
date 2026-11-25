@@ -21,6 +21,8 @@ func _ready() -> void:
 	magnet_range *= 1.0 + BALANCE.pickup_range_per_level * GameData.meta_upgrades["pickup_range"]
 	player = get_tree().get_first_node_in_group("player")
 	body_entered.connect(_on_body_entered)
+	if value > 1:  # A merged coin (worth several) is a little bigger
+		scale = Vector2.ONE * minf(1.0 + 0.1 * (value - 1), 1.6)
 
 	# Drop "pop": hop a little way out from where the enemy died.
 	var landing: Vector2 = position + Vector2(randf_range(-30, 30), randf_range(-30, 30))

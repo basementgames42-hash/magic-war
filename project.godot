@@ -23,6 +23,7 @@ GameData="*uid://cx2ijrhboiy1h"
 Audio="*res://autoload/audio.gd"
 WindowControls="*res://autoload/window_controls.gd"
 Ads="*res://autoload/ads.gd"
+Store="*res://autoload/store.gd"
 
 [display]
 

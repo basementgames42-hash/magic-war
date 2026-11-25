@@ -17,6 +17,46 @@ func _ready() -> void:
 	%SettingsButton.pressed.connect(WindowControls.open_settings)
 	%ResetButton.pressed.connect(_on_reset_pressed)
 	refresh_reset_button()
+	add_shop_row()
+
+func add_shop_row() -> void:
+	# Gems next to the coins, and Shop + Daily Quests side by side under
+	# Upgrades (Quests shows how many rewards are waiting).
+	var gems := Label.new()
+	gems.text = str(GameData.gems)
+	var coins_row: HBoxContainer = %CoinsLabel.get_parent()
+	coins_row.add_theme_constant_override("separation", 8)
+	var spacer := Control.new()
+	spacer.custom_minimum_size.x = 18
+	coins_row.add_child(spacer)
+	coins_row.add_child(ShopUI.amount(ShopUI.icon(ShopCatalog.GEM_ICON, 36), gems))
+	gems.add_theme_font_size_override("font_size", 28)
+	var shop := Button.new()
+	shop.text = "Shop"
+	shop.icon = ShopUI.icon("chest_treasure", 40)
+	shop.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/ui/item_shop.tscn"))
+	var quests := Button.new()
+	var waiting: int = GameData.claimable_quests()
+	quests.text = "Quests" + (" (%d)" % waiting if waiting > 0 else "")
+	quests.icon = ShopUI.icon("scroll", 40)
+	quests.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/ui/daily_quests.tscn"))
+	# Pairs, so the menu stays short enough for small screens:
+	# [Upgrades | Shop] and [Quests | Settings].
+	var menu: Node = %UpgradesButton.get_parent()
+	var at: int = %UpgradesButton.get_index()
+	for pair in [[%UpgradesButton, shop], [quests, %SettingsButton]]:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		for b in pair:
+			if b.get_parent():
+				b.get_parent().remove_child(b)
+			b.custom_minimum_size = Vector2(174, 66)
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			b.add_theme_font_size_override("font_size", 26)
+			row.add_child(b)
+		menu.add_child(row)
+		menu.move_child(row, at)
+		at += 1
 
 func refresh_reset_button() -> void:
 	# Nothing bought yet = nothing to reset.

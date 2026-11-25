@@ -42,6 +42,11 @@ var boss_spawned: bool = false
 var boss_down: bool = false
 var boss_hud: Control
 
+func _enter_tree() -> void:
+	# Before the player's _ready, so this run's shop consumables are working
+	# when it sets up its stats.
+	GameData.start_run()
+
 func _ready() -> void:
 	endless = GameData.endless
 	enemy_order.assign(Levels.endless_enemies() if endless else map["enemies"])
@@ -52,6 +57,7 @@ func _ready() -> void:
 	revive_offer = REVIVE_OFFER.new()
 	revive_offer.accepted.connect(_on_revive_accepted)
 	revive_offer.declined.connect(finish_run)
+	revive_offer.chance_used.connect(_on_second_chance_used)
 	add_child(revive_offer)
 	$HUD.add_child(BOOST_OFFER.new())
 	boss_hud = BOSS_HUD.new()
@@ -78,7 +84,8 @@ func _ready() -> void:
 
 	# Round gold counter.
 	GameData.run_coins_changed.connect(_on_run_coins_changed)
-	GameData.start_run()
+	_on_run_coins_changed(GameData.run_coins)
+	GameData.quest_completed.connect(_on_quest_completed)
 
 	# Keep the camera inside the arena (plus a strip of the tree line).
 	var camera: Camera2D = player.get_node("Camera2D")
@@ -185,6 +192,7 @@ func _on_leveled_up(new_level: int) -> void:
 	$HUD/LevelLabel.text = "Level %d" % new_level
 	update_damage_bonus()
 	$LevelUpMenu.open()
+	GameData.quest_best("level", new_level)
 	if endless:
 		check_unlocks()  # Level milestones count the moment they're reached
 
@@ -240,6 +248,7 @@ func win_level() -> void:
 	var testing: bool = not GameData.test_map.is_empty()
 	var stats: Dictionary = run_stats()
 	if not testing:  # A test map unlocks nothing
+		GameData.quest_add("win", 1)
 		var unlocked_before: int = GameData.levels_unlocked
 		GameData.complete_level(index)
 		if GameData.levels_unlocked > unlocked_before:
@@ -261,11 +270,20 @@ func win_level() -> void:
 
 func _on_player_died() -> void:
 	# revives_left below 0 = unlimited (BALANCE.revives_per_run = -1).
-	if revives_left != 0 and Ads.is_available():
+	# A Second Chance (Shop) works even where there are no ads.
+	var ad: bool = revives_left != 0 and Ads.is_available()
+	if ad or GameData.second_chances() > 0:
 		get_tree().paused = true
-		revive_offer.visible = true
+		revive_offer.open(GameData.second_chances(), ad)
 	else:
 		finish_run()
+
+func _on_second_chance_used() -> void:
+	if GameData.use_second_chance():
+		get_tree().paused = false
+		player.revive()
+	else:
+		_on_player_died()
 
 func _on_revive_accepted() -> void:
 	Ads.show_rewarded(_on_revive_ad_finished)
@@ -277,13 +295,14 @@ func _on_revive_ad_finished(rewarded: bool) -> void:
 		get_tree().paused = false
 		player.revive()
 	else:
-		revive_offer.visible = true  # Skipped: the choice stands
+		_on_player_died()  # Skipped: the choice stands
 
 func finish_run() -> void:
 	get_tree().paused = false
 	run_over = true
 	var stats: Dictionary = run_stats()
 	if endless:
+		GameData.quest_best("endless_minutes", int(elapsed / 60.0))
 		# Personal best for endless runs (saved with the rest of GameData).
 		stats["best"] = GameData.endless_best
 		stats["new_record"] = elapsed > GameData.endless_best
@@ -301,6 +320,29 @@ func finish_run() -> void:
 		$GameOverScreen.open("DEFEATED", "%s%s was left on the clock." % [
 			"So close! " if left <= 60.0 else "", format_time(left)], stats, false)
 
+func _on_quest_completed(text: String) -> void:
+	# A banner at the top for a few seconds. It ignores the mouse and keeps
+	# going while paused, so it never gets in the way.
+	var label := Label.new()
+	label.text = "Quest complete: " + text
+	label.theme_type_variation = &"DarkLabel"
+	label.add_theme_font_size_override("font_size", 24)
+	label.add_theme_color_override("font_color", Color(1.0, 0.86, 0.35))
+	label.add_theme_color_override("font_outline_color", Color(0.1, 0.06, 0.02))
+	label.add_theme_constant_override("outline_size", 8)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.process_mode = Node.PROCESS_MODE_ALWAYS
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	label.position.y = 120
+	$HUD.add_child(label)
+	label.position.x = (get_viewport().get_visible_rect().size.x - label.size.x) / 2.0
+	Audio.play("level_up", -6.0, 0.0)
+	var t := label.create_tween()
+	t.tween_interval(3.0)
+	t.tween_property(label, "modulate:a", 0.0, 0.6)
+	t.tween_callback(label.queue_free)
+
 static func format_time(seconds: float) -> String:
 	return "%02d:%02d" % [int(seconds) / 60, int(seconds) % 60]
 
@@ -310,6 +352,7 @@ func _on_run_coins_changed(amount: int) -> void:
 func _on_enemy_killed() -> void:
 	kills += 1
 	$HUD/GoldCounter/KillLabel.text = str(kills)
+	GameData.quest_add("kill", 1)
 
 func boss_name() -> String:
 	return map.get("boss", "The Warlord")
@@ -460,6 +503,7 @@ func spawn_elite() -> void:
 	elite.move_speed = BALANCE.elite_speed * enemy_type["speed"] * enemy_speed_scale()  # Slower, scarier
 	elite.contact_damage = BALANCE.elite_damage
 	elite.xp_drop = 10              # Kill reward: a shower of orbs
+	elite.killed.connect(GameData.quest_add.bind("elite", 1))
 	# Physically huge. Sheets bigger than the usual 192px frame need less
 	# scaling, or a minotaur elite would hide the player completely.
 	var frame_height: float = elite.custom_frames.get_frame_texture(&"run", 0).get_height()

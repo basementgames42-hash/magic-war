@@ -726,6 +726,8 @@ func drop_chances() -> Dictionary:
 			+ BALANCE.get(luck[1]) * GameData.meta_upgrades[luck[0]]) * GameData.boost_factor("drops")
 	return chances
 
+const MAX_LOOSE_PICKUPS: int = 120  # Orbs (and, separately, coins) before drops merge
+
 func die(drop_pickup: bool = true) -> void:
 	if is_queued_for_deletion():
 		return  # Already dying (e.g. a fireball and a nuke on the same frame)
@@ -743,15 +745,24 @@ func die(drop_pickup: bool = true) -> void:
 				pickup.global_position = global_position
 				get_parent().add_child(pickup)
 				break
-	for i in xp_drop:
+	# With lots already on the ground (big kill waves, nukes), drop ONE orb and
+	# ONE coin worth the same total instead of many, so the pickup count stays
+	# low enough to run smoothly on the web.
+	var crowded_orbs: bool = get_tree().get_node_count_in_group("xp_orbs") >= MAX_LOOSE_PICKUPS
+	var orbs: int = mini(xp_drop, 1) if crowded_orbs else xp_drop
+	for i in orbs:
 		var orb: Area2D = XP_ORB_SCENE.instantiate()
+		orb.xp_value = xp_drop if crowded_orbs else 1
 		orb.global_position = global_position + Vector2(
 			randf_range(-30, 30), randf_range(-30, 30)
 		)
 		get_parent().add_child(orb)
 	# Coins pop out as pickups; gold is only earned when the player grabs them.
-	for i in coin_drop:
+	var crowded_coins: bool = get_tree().get_node_count_in_group("coins") >= MAX_LOOSE_PICKUPS
+	var coins: int = mini(coin_drop, 1) if crowded_coins else coin_drop
+	for i in coins:
 		var coin: Area2D = COIN_SCENE.instantiate()
+		coin.value = coin_drop if crowded_coins else 1
 		coin.global_position = global_position
 		get_parent().add_child(coin)
 	queue_free()

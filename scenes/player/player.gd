@@ -91,6 +91,9 @@ func _ready() -> void:
 	# Apply permanent meta upgrades purchased in the shop.
 	max_health += BALANCE.vitality_per_level * GameData.meta_upgrades["max_hp"]
 	weapon_damage += BALANCE.power_per_level * GameData.meta_upgrades["damage"]
+	# Shop: Battle Elixir (this run) and Heart of the Titan (premium).
+	weapon_damage = roundi(weapon_damage * GameData.damage_factor())
+	max_health += GameData.bonus_max_hp()
 	move_speed *= 1.0 + BALANCE.agility_per_level * GameData.meta_upgrades["move_speed"]
 	regen_rate = BALANCE.regen_per_level * GameData.meta_upgrades["regen"]
 	fire_cooldown *= 1.0 - BALANCE.fire_rate_per_level * GameData.meta_upgrades["fire_rate"]
@@ -322,7 +325,7 @@ var level: int = 1
 var xp_to_next: int = 5
 
 func collect_xp(amount: int) -> void:
-	xp += roundi(amount * GameData.boost_factor("xp"))
+	xp += roundi(amount * GameData.xp_factor())
 	while xp >= xp_to_next:
 		xp -= xp_to_next
 		level += 1

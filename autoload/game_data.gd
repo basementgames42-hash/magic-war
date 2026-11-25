@@ -36,6 +36,21 @@ var map_to_celebrate: int = -1  # Map just unlocked, whose padlock breaks on map
 var upgrade_spent: int = 0      # Coins actually paid for upgrades so far: Reset refunds this (saved)
 var show_damage_numbers: bool = false  # Settings menu toggle (saved), both modes
 
+# --- Shop (see res://config/shop_catalog.gd) ---
+signal gems_changed(amount: int)
+signal quest_completed(text: String)
+var gems: int = 0                     # The rarer currency (saved)
+var stock: Dictionary = {}            # Consumables kept until used, id -> count (saved)
+var armed: Array[String] = []         # Next-run consumables bought and waiting (saved)
+var run_effects: Array[String] = []   # Next-run consumables working in this run
+var premium: Array[String] = []       # Premium upgrades owned (saved)
+var free_revive: bool = false         # Phoenix Feather's revive, still unused this run
+
+# --- Daily Quests ---
+var quest_day: String = ""            # Date the quests below are for (saved)
+var quests: Array = []                # [{kind, tier, goal, progress, claimed}] (saved)
+var quest_bonus_claimed: bool = false # All-three bonus taken today (saved)
+
 # Meta upgrade levels the player has purchased. Keys must match
 # the shop and player code.
 var meta_upgrades: Dictionary = {
@@ -90,10 +105,190 @@ func start_run() -> void:
 	run_coins = 0
 	pending_coins = 0.0
 	active_boost = ""
+	# Next-run consumables go to work now and are used up.
+	run_effects = armed.duplicate()
+	armed.clear()
+	free_revive = has_premium("phoenix")
+	quest_add("runs", 1)
+	save_game()
 	run_coins_changed.emit(run_coins)
 
 func boost_factor(id: String) -> float:
 	return BALANCE.boost_multiplier if active_boost == id else 1.0
+
+# Everything that multiplies gold / EXP / damage outside the meta upgrades:
+# the ad boost, this run's consumables and premium upgrades.
+func gold_factor() -> float:
+	var f: float = boost_factor("gold")
+	if "charm" in run_effects:
+		f *= ShopCatalog.CHARM_GOLD
+	if has_premium("treasury"):
+		f *= ShopCatalog.TREASURY_GOLD
+	return f
+
+func xp_factor() -> float:
+	var f: float = boost_factor("xp")
+	if "tome" in run_effects:
+		f *= ShopCatalog.TOME_XP
+	if has_premium("insight"):
+		f *= ShopCatalog.INSIGHT_XP
+	return f
+
+func damage_factor() -> float:
+	return ShopCatalog.ELIXIR_DAMAGE if "elixir" in run_effects else 1.0
+
+func bonus_max_hp() -> int:
+	return ShopCatalog.TITAN_HP if has_premium("titan") else 0
+
+# --- Shop ---------------------------------------------------------------------
+
+func add_gems(amount: int) -> void:
+	gems += amount
+	save_game()
+	gems_changed.emit(gems)
+
+func has_premium(id: String) -> bool:
+	return id in premium
+
+func stock_count(id: String) -> int:
+	return int(stock.get(id, 0))
+
+func is_armed(id: String) -> bool:
+	return id in armed
+
+func can_buy_consumable(id: String) -> bool:
+	var item: Dictionary = ShopCatalog.consumable(id)
+	if item.is_empty() or coins < item["cost"]:
+		return false
+	if item["kind"] == "stock":
+		return stock_count(id) < item["max"]
+	return not is_armed(id)
+
+func buy_consumable(id: String) -> bool:
+	if not can_buy_consumable(id):
+		return false
+	var item: Dictionary = ShopCatalog.consumable(id)
+	coins -= item["cost"]
+	if item["kind"] == "stock":
+		stock[id] = stock_count(id) + 1
+	else:
+		armed.append(id)
+	save_game()
+	return true
+
+func buy_premium(id: String) -> bool:
+	var item: Dictionary = ShopCatalog.premium(id)
+	if item.is_empty() or has_premium(id) or gems < item["cost"]:
+		return false
+	gems -= item["cost"]
+	premium.append(id)
+	save_game()
+	gems_changed.emit(gems)
+	return true
+
+func buy_coin_chest() -> bool:
+	var chest: Dictionary = ShopCatalog.COIN_CHEST
+	if gems < chest["gems"]:
+		return false
+	gems -= chest["gems"]
+	coins += chest["coins"]
+	save_game()
+	gems_changed.emit(gems)
+	return true
+
+func second_chances() -> int:
+	# Revives that need no ad: Phoenix Feather's free one, then bought ones.
+	return stock_count("second_chance") + (1 if free_revive else 0)
+
+func use_second_chance() -> bool:
+	if free_revive:
+		free_revive = false
+		return true
+	if stock_count("second_chance") > 0:
+		stock["second_chance"] = stock_count("second_chance") - 1
+		save_game()
+		return true
+	return false
+
+# --- Daily Quests ---------------------------------------------------------------
+
+static func today() -> String:
+	return Time.get_date_string_from_system()
+
+func refresh_quests() -> void:
+	# New quests when the day changes; the same three all day.
+	if quest_day == today() and quests.size() == ShopCatalog.QUESTS_PER_DAY:
+		return
+	quest_day = today()
+	quest_bonus_claimed = false
+	quests.clear()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(quest_day)
+	var pool: Array = ShopCatalog.QUESTS.duplicate()
+	for i in ShopCatalog.QUESTS_PER_DAY:
+		var def: Dictionary = pool.pop_at(rng.randi_range(0, pool.size() - 1))
+		var tier: int = rng.randi_range(0, 2)
+		quests.append({"kind": def["kind"], "tier": tier, "goal": def["goals"][tier],
+			"progress": 0, "claimed": false})
+	save_game()
+
+static func quest_text(q: Dictionary) -> String:
+	return ShopCatalog.quest_def(q["kind"])["text"] % q["goal"]
+
+static func quest_reward(q: Dictionary) -> Array:
+	return ShopCatalog.REWARDS[q["tier"]]
+
+static func quest_done(q: Dictionary) -> bool:
+	return q["progress"] >= q["goal"]
+
+func quest_add(kind: String, amount: int) -> void:
+	# Adds to a quest that counts up over the day. Not saved on every call
+	# (kills happen constantly); runs save when they end.
+	refresh_quests()
+	for q in quests:
+		if q["kind"] == kind and not quest_done(q):
+			q["progress"] = mini(q["progress"] + amount, q["goal"])
+			if quest_done(q):
+				quest_completed.emit(quest_text(q))
+
+func quest_best(kind: String, value: int) -> void:
+	# For quests that count the best single run (level, Endless minutes).
+	refresh_quests()
+	for q in quests:
+		if q["kind"] == kind and not quest_done(q) and value > q["progress"]:
+			q["progress"] = mini(value, q["goal"])
+			if quest_done(q):
+				quest_completed.emit(quest_text(q))
+
+func claimable_quests() -> int:
+	refresh_quests()
+	var n: int = 0
+	for q in quests:
+		if quest_done(q) and not q["claimed"]:
+			n += 1
+	if all_quests_claimed() and not quest_bonus_claimed:
+		n += 1
+	return n
+
+func all_quests_claimed() -> bool:
+	return quests.all(func(q): return q["claimed"])
+
+func claim_quest(index: int) -> bool:
+	var q: Dictionary = quests[index]
+	if q["claimed"] or not quest_done(q):
+		return false
+	q["claimed"] = true
+	var reward: Array = quest_reward(q)
+	coins += reward[0]
+	add_gems(reward[1])  # Saves
+	return true
+
+func claim_quest_bonus() -> bool:
+	if quest_bonus_claimed or not all_quests_claimed():
+		return false
+	quest_bonus_claimed = true
+	add_gems(ShopCatalog.ALL_DONE_GEMS)
+	return true
 
 func is_level_unlocked(index: int) -> bool:
 	return index < levels_unlocked
@@ -109,11 +304,13 @@ func add_coins(amount: int) -> void:
 	# whole number (at +25%: 2, 1, 1, 1, then repeat = 5 gold per 4 coins).
 	# The bonus shows on the first coin, and the total still comes out exact.
 	pending_coins += amount * (1.0 + BALANCE.greed_per_level * meta_upgrades["coin_gain"]) \
-		* boost_factor("gold")
+		* gold_factor()
 	var gained: int = maxi(ceili(pending_coins - 0.0001), 0)  # 0.0001: float slop
 	pending_coins -= gained
 	coins += gained
 	run_coins += gained
+	if gained > 0:
+		quest_add("gold", gained)
 	run_coins_changed.emit(run_coins)
 
 # The Luck upgrades (second tier) and the third tier cost more than the
@@ -181,6 +378,13 @@ func save_game() -> void:
 		"show_damage_numbers": show_damage_numbers,
 		"map_to_celebrate": map_to_celebrate,
 		"upgrade_spent": upgrade_spent,
+		"gems": gems,
+		"stock": stock,
+		"armed": armed,
+		"premium": premium,
+		"quest_day": quest_day,
+		"quests": quests,
+		"quest_bonus_claimed": quest_bonus_claimed,
 	}
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	file.store_string(JSON.stringify(data))
@@ -214,3 +418,22 @@ func load_game() -> void:
 		if saved.has(key):
 			meta_upgrades[key] = mini(int(saved[key]), MAX_UPGRADE_LEVEL)
 	upgrade_spent = int(data.get("upgrade_spent", old_price_total(meta_upgrades)))
+	gems = int(data.get("gems", 0))
+	var saved_stock: Dictionary = data.get("stock", {})
+	for id in saved_stock:
+		if not ShopCatalog.consumable(str(id)).is_empty():
+			stock[str(id)] = int(saved_stock[id])
+	for id in data.get("armed", []):
+		if not ShopCatalog.consumable(str(id)).is_empty() and not str(id) in armed:
+			armed.append(str(id))
+	for id in data.get("premium", []):
+		if not ShopCatalog.premium(str(id)).is_empty() and not str(id) in premium:
+			premium.append(str(id))
+	quest_day = str(data.get("quest_day", ""))
+	quest_bonus_claimed = bool(data.get("quest_bonus_claimed", false))
+	quests.clear()
+	for q in data.get("quests", []):
+		if q is Dictionary and not ShopCatalog.quest_def(str(q.get("kind", ""))).is_empty():
+			quests.append({"kind": str(q["kind"]), "tier": clampi(int(q.get("tier", 0)), 0, 2),
+				"goal": int(q.get("goal", 1)), "progress": int(q.get("progress", 0)),
+				"claimed": bool(q.get("claimed", false))})

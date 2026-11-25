@@ -1,9 +1,16 @@
 extends CanvasLayer
-# Revive Offer: shown when the player dies with a revive left. Main pauses the
-# game behind it and decides what each answer does.
+# Revive Offer: shown when the player dies and can come back, either by using
+# a Second Chance (bought in the Shop, or Phoenix Feather's free one) or by
+# watching an ad. Main pauses the game behind it and decides what each
+# answer does. Call open() to show it with the right buttons.
 
-signal accepted
+signal accepted       # Watch an ad
+signal chance_used    # Use a Second Chance
 signal declined
+
+var body: Label
+var chance_button: Button
+var watch_button: Button
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -26,22 +33,32 @@ func _ready() -> void:
 	heading.theme_type_variation = &"HeadingLabel"
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(heading)
-	var body := Label.new()
-	body.text = "Watch an ad to fight on from here?"
+	body = Label.new()
 	body.theme_type_variation = &"DarkLabel"
 	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(body)
-	var watch := Button.new()
-	watch.text = "Watch Ad & Continue"
-	watch.custom_minimum_size = Vector2(400, 72)
-	watch.pressed.connect(_on_answer.bind(accepted))
-	column.add_child(watch)
+	chance_button = Button.new()
+	chance_button.custom_minimum_size = Vector2(400, 72)
+	chance_button.pressed.connect(_on_answer.bind(chance_used))
+	column.add_child(chance_button)
+	watch_button = Button.new()
+	watch_button.text = "Watch Ad & Continue"
+	watch_button.custom_minimum_size = Vector2(400, 72)
+	watch_button.pressed.connect(_on_answer.bind(accepted))
+	column.add_child(watch_button)
 	var give_up := Button.new()
 	give_up.text = "No Thanks"
 	give_up.theme_type_variation = &"RedButton"
 	give_up.custom_minimum_size = Vector2(400, 72)
 	give_up.pressed.connect(_on_answer.bind(declined))
 	column.add_child(give_up)
+
+func open(chances: int, ad: bool) -> void:
+	chance_button.visible = chances > 0
+	chance_button.text = "Use Second Chance (%d left)" % chances
+	watch_button.visible = ad
+	body.text = "Fight on from here?" if chances > 0 else "Watch an ad to fight on from here?"
+	visible = true
 
 func _on_answer(answer: Signal) -> void:
 	visible = false
