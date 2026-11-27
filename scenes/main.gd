@@ -184,8 +184,7 @@ func drift_map(delta: float) -> void:
 	var t: float = smoothstep(hold, hold + blend, into)
 	$Ground.modulate = Levels.MAPS[from]["ground"].lerp(Levels.MAPS[to]["ground"], t)
 	if stage != map_stage:
-		map_stage = stage
-		show_map_banner(Levels.MAPS[from]["name"].to_upper())  # Fully arrived
+		map_stage = stage  # Arrived on the next map (no name banner: it just changes)
 	morph_wait -= delta
 	if morph_wait <= 0.0:
 		morph_wait = 0.25

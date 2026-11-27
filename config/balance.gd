@@ -133,6 +133,8 @@ extends Resource
 ## this level with at least three weapons taken (the first three you took).
 ## Three choices at once, one per run.
 @export_range(1, 100) var god_min_level: int = 15
+## A second God-Tier is offered at this level (Endless; 0 = only one per run).
+@export_range(0, 100) var god_second_level: int = 20
 ## Multiplies every God-Tier Combo's damage.
 @export_range(0.25, 4.0, 0.05) var god_damage_scale: float = 1.0
 ## Extra God-Tier damage per player level past god_min_level (0.04 = +4%).
