@@ -1,9 +1,26 @@
-# iOS builds to TestFlight, without a Mac
+# Testing Magic War as a real iPhone app (TestFlight), without a Mac
+
+**This is for testing on your own phones, not for releasing the game.**
+TestFlight is Apple's private beta channel: builds go only to people you
+invite (you, your partner, up to 100 team members), install through Apple's
+TestFlight app, and never appear on the public App Store. Testing within
+your own team needs no App Review. Each build works for 90 days, and you
+can upload a new one whenever you like.
+
+Why bother when there's a web build: the web version runs inside Safari,
+which limits the game's graphics, so crowded screens lag and the phone heats
+up. The TestFlight build is a native app that uses the iPhone's GPU
+directly, so it shows how the game will actually perform once released.
 
 GitHub Actions builds the iPhone app and uploads it to TestFlight. Nobody
 needs a Mac: Godot writes the Xcode project on a Linux runner, and a macOS
 runner only signs and uploads it. The workflow is
 `.github/workflows/ios-testflight.yml`.
+
+The Apple steps below (developer account, an app record in App Store
+Connect) are required even just for TestFlight. Creating the app record
+only reserves the name and bundle ID; nothing is published until you
+submit it for App Review, which is a separate, later step.
 
 **Signing is automatic.** Xcode creates and manages the distribution
 certificate and the App Store provisioning profile in Apple's cloud, using
@@ -87,9 +104,11 @@ The art packs (`scenes/assets`) are licensed for use in the game, not for a
 public repo, so they're git-ignored. The workflow fetches them from a
 separate **private** repo.
 
-1. Create a private repo named **`magic-war-assets`** under the
-   basementgames42-hash account. Its contents are the *inside* of
-   `scenes/assets` (the three pack folders at the top level).
+1. **Already done:** the private repo
+   https://github.com/basementgames42-hash/magic-war-assets holds the
+   contents of `scenes/assets` (the three pack folders at the top level,
+   with their `.import` files; the leftover `__MACOSX` folders are left
+   out). When the art changes, copy `scenes/assets` over it and push.
 2. Create a token that can read it:
    https://github.com/settings/personal-access-tokens/new (signed in as
    basementgames42-hash)
