@@ -94,7 +94,7 @@ const MAPS: Array[Dictionary] = [
 			{"name": "Torch Goblin", "run": "Run", "attack": "Attack", "ai": "arson", "speed": 1.05, "health": 1.0, "flat_damage": true},
 			{"name": "Spear Goblin", "run": "Run", "attack": "Attack Fast", "ai": "skirmish", "speed": 1.1, "health": 1.0, "flat_damage": true},
 			{"name": "Gnoll", "run": "Walk", "attack": "Throw", "ai": "kite", "speed": 0.95, "health": 0.9},
-			{"name": "Panda", "run": "Run", "attack": "Attack", "ai": "slam", "speed": 0.8, "health": 1.8},
+			{"name": "Panda", "run": "Run", "attack": "Attack", "ai": "slam", "speed": 0.8, "health": 1.8, "flat_damage": true},
 			{"name": "Bear", "run": "Run", "attack": "Attack", "ai": "enrage", "speed": 0.6, "health": 2.5},
 		],
 	},
@@ -225,7 +225,7 @@ const MAPS: Array[Dictionary] = [
 			{"name": "Imp", "run": "Move", "attack": "Attack_Loop", "ai": "blink", "speed": 0.9, "health": 1.1,
 				"tint": Color(0.8, 0.6, 1.1)},
 			{"name": "Panda", "run": "Run", "attack": "Attack", "ai": "slam", "speed": 0.8, "health": 1.9,
-				"tint": Color(0.7, 0.55, 1.0)},
+				"tint": Color(0.7, 0.55, 1.0), "flat_damage": true},
 		],
 	},
 	{

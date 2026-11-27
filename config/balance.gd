@@ -215,7 +215,9 @@ extends Resource
 @export_range(0.0, 0.2, 0.01) var boss_health_per_player_level: float = 0.05
 ## Damage of one boss hit, before the usual multipliers.
 @export_range(1, 30) var boss_damage: int = 4
-## Boss size compared with a normal enemy (elites are 2.5).
+## Size of the last enemy type's elite on regular maps, compared with a normal
+## enemy. The boss and every other elite are 2.5 (ELITE_SCALE in main.gd), so
+## the boss is never smaller than its own kind.
 @export_range(1.0, 4.0, 0.05) var boss_scale: float = 1.75
 ## A nuke hits the boss for this share of its max health instead of killing it.
 @export_range(0.0, 1.0, 0.05) var boss_nuke_share: float = 0.1

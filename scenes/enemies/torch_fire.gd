@@ -17,6 +17,13 @@ const FLAME_RED := Color(0.86, 0.2, 0.05)
 const FLAME_ORANGE := Color(1.0, 0.55, 0.1)
 const FLAME_CORE := Color(1.0, 0.93, 0.55)
 const DIE_DOWN: float = 0.6  # Seconds at the end for the flames to sink away
+# Performance: a crowd of Torch Goblins keeps many patches burning at once.
+# Past this many, the extra fire-burst sprites are shared out between them
+# (same overall amount on screen), so the cost stays flat however many burn.
+const BUSY_FIRES: int = 8
+const MAX_FLAMES: int = 9
+
+static var burning: int = 0  # Torch fires alive right now
 
 var flames: Array = []   # [offset, height (0-1), phase]
 var scorch: PackedVector2Array
@@ -27,7 +34,8 @@ var heat: Sprite2D
 
 func _ready() -> void:
 	super()
-	var count: int = clampi(int(radius / 12.0), 5, 16)
+	burning += 1
+	var count: int = clampi(int(radius / 12.0), 5, MAX_FLAMES)
 	for i in count:
 		var spot: Vector2 = Vector2.from_angle(randf() * TAU) * radius * sqrt(randf()) * 0.75
 		flames.append([spot, randf_range(0.6, 1.0), randf() * TAU])
@@ -42,7 +50,7 @@ func _ready() -> void:
 	embers = CPUParticles2D.new()
 	embers.texture = FX.glow_texture()
 	embers.material = FX.additive_material()
-	embers.amount = count * 3
+	embers.amount = count * 2
 	embers.lifetime = 1.1
 	embers.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
 	embers.emission_sphere_radius = radius * 0.7
@@ -57,6 +65,9 @@ func _ready() -> void:
 	embers.color_ramp = FX.fade_ramp()
 	embers.emitting = false
 	add_child(embers)
+
+func _exit_tree() -> void:
+	burning -= 1
 
 func _process(delta: float) -> void:
 	var was_burning: bool = age >= fuse
@@ -76,7 +87,10 @@ func _process(delta: float) -> void:
 	# The pack's fire bursts popping up across the patch.
 	puff_timer -= delta
 	if puff_timer <= 0.0:
-		puff_timer = randf_range(0.12, 0.28) * 60.0 / radius
+		# Bigger (elite) patches get bigger bursts, not more of them.
+		puff_timer = randf_range(0.2, 0.4)
+		if burning > BUSY_FIRES and randf() > float(BUSY_FIRES) / burning:
+			return
 		var spot: Vector2 = Vector2.from_angle(randf() * TAU) * radius * sqrt(randf()) * 0.7
 		FX.play_sheet(get_parent(), global_position + spot, FIRE_SHEETS.pick_random(),
 			randf_range(14.0, 20.0), clampf(radius / 70.0, 0.8, 2.2))
@@ -136,13 +150,13 @@ func tongue(base: Vector2, width: float, height: float, sway: float) -> PackedVe
 	# One loop, no repeated points: up the right side to the tip, down the
 	# left side, then round the bottom back toward where it started.
 	var points := PackedVector2Array()
-	var steps: int = 8
+	var steps: int = 5  # Points per side: enough for the curve at this size
 	for i in steps + 1:                  # Right base (t=0) up to the tip (t=1)
 		points.append(base + flame_side(float(i) / steps, width, height, sway, 1.0))
 	for i in range(steps - 1, -1, -1):   # Left side, just below the tip down to its base
 		points.append(base + flame_side(float(i) / steps, width, height, sway, -1.0))
-	for i in range(1, 8):                # Round bottom, left to right (ends excluded)
-		var a: float = PI * float(i) / 8.0
+	for i in range(1, 4):                # Round bottom, left to right (ends excluded)
+		var a: float = PI * float(i) / 4.0
 		points.append(base + Vector2(-cos(a) * width, sin(a) * width * 0.55))
 	return points
 

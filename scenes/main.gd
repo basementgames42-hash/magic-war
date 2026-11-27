@@ -10,6 +10,7 @@ const BOOST_OFFER = preload("res://scenes/ui/boost_offer.gd")
 const UNLOCK_TOAST = preload("res://scenes/ui/unlock_toast.gd")
 const BOSS_HUD = preload("res://scenes/ui/boss_hud.gd")
 const FX = preload("res://scenes/spells/spell_fx.gd")
+const ELITE_SCALE: float = 2.5  # Elite size compared with a normal enemy
 
 @export var spawn_distance: float = 800.0
 @export var elite_interval: float = 60.0    # An elite every minute
@@ -377,6 +378,9 @@ func spawn_boss() -> void:
 	boss = make_enemy()
 	enemy_type = spawning
 	boss.is_boss = true
+	# Always hits for boss_damage, even when its kind is a flat 1-damage enemy
+	# (Duskwood's boss is a giant Panda).
+	boss.flat_hit = false
 	boss.max_health = roundi(BALANCE.boss_health * map["health"]
 		* (1.0 + levels_gained() * BALANCE.boss_health_per_player_level))
 	boss.move_speed = BALANCE.enemy_speed * final_type["speed"] * enemy_speed_scale()
@@ -385,7 +389,8 @@ func spawn_boss() -> void:
 	boss.xp_drop = BALANCE.boss_xp
 	# Same big-sheet correction as elites, so a minotaur boss isn't enormous.
 	var frame_height: float = boss.custom_frames.get_frame_texture(&"run", 0).get_height()
-	boss.scale = Vector2.ONE * BALANCE.boss_scale * minf(192.0 / frame_height, 1.0)
+	# Swapped with the last elite's size (see spawn_elite).
+	boss.scale = Vector2.ONE * ELITE_SCALE * minf(192.0 / frame_height, 1.0)
 	boss.killed.connect(_on_boss_killed)
 	add_child(boss)
 	boss_hud.announce(boss_name(), boss)
@@ -520,7 +525,12 @@ func spawn_elite() -> void:
 	# Physically huge. Sheets bigger than the usual 192px frame need less
 	# scaling, or a minotaur elite would hide the player completely.
 	var frame_height: float = elite.custom_frames.get_frame_texture(&"run", 0).get_height()
-	elite.scale = Vector2.ONE * 2.5 * minf(192.0 / frame_height, 1.0)
+	# Regular maps: the last enemy type's elite takes the boss's size and the
+	# boss takes the elite size, so the boss always looks bigger than its kin.
+	var elite_size: float = ELITE_SCALE
+	if not endless and enemy_type == enemy_order.back():
+		elite_size = BALANCE.boss_scale
+	elite.scale = Vector2.ONE * elite_size * minf(192.0 / frame_height, 1.0)
 	apply_scaling(elite)
 
 	add_child(elite)
