@@ -8,6 +8,7 @@ const REVIVE_OFFER = preload("res://scenes/ui/revive_offer.gd")
 const ENEMY_SCRIPT = preload("res://scenes/enemies/enemy.gd")
 const BOOST_OFFER = preload("res://scenes/ui/boost_offer.gd")
 const UNLOCK_TOAST = preload("res://scenes/ui/unlock_toast.gd")
+const EFFECT_ICONS = preload("res://scenes/ui/effect_icons.gd")
 const BOSS_HUD = preload("res://scenes/ui/boss_hud.gd")
 const FX = preload("res://scenes/spells/spell_fx.gd")
 const ELITE_SCALE: float = 2.5  # Elite size compared with a normal enemy
@@ -63,6 +64,7 @@ func _ready() -> void:
 	revive_offer.chance_used.connect(_on_second_chance_used)
 	add_child(revive_offer)
 	$HUD.add_child(BOOST_OFFER.new())
+	$HUD.add_child(EFFECT_ICONS.new())  # Icons for this run's consumables, beside the Level ribbon
 	boss_hud = BOSS_HUD.new()
 	$HUD.add_child(boss_hud)
 	WindowControls.layout_changed.connect(fit_hud)
