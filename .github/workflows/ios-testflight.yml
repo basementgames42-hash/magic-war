@@ -1,0 +1,214 @@
+# Builds Magic War for iOS and uploads it to TestFlight. Run it by hand:
+# GitHub > Actions > "iOS build to TestFlight" > Run workflow.
+# Setup (Apple account, API key, GitHub secrets): docs/ios-testflight-setup.md
+#
+# Two jobs, to keep the expensive macOS minutes low:
+#   export     - Linux. Downloads Godot (cached) and writes the Xcode project.
+#   testflight - macOS. Only archives, signs and uploads (Xcode needs a Mac).
+# Signing is automatic: Xcode creates and manages the distribution
+# certificate and App Store profile in the cloud through the App Store
+# Connect API key, so there are no certificate or profile files to keep.
+
+name: iOS build to TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: "Upload to TestFlight (off = just build, and keep the .ipa as an artifact)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: ios-testflight
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: "4.7"
+  GODOT_RELEASE: "4.7-stable"
+  BUNDLE_ID: com.basementgames.magicwar      # Must match the App ID in your Apple account
+  ASSETS_REPO: basementgames42-hash/magic-war-assets  # Private repo holding scenes/assets
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the secrets are set
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          ASSETS: ${{ secrets.ASSETS_REPO_TOKEN }}
+        run: |
+          missing=""
+          [ -n "$TEAM" ] || missing="$missing APPLE_TEAM_ID"
+          [ -n "$ASSETS" ] || missing="$missing ASSETS_REPO_TOKEN"
+          if [ -n "$missing" ]; then echo "::error::Missing GitHub secrets:$missing (see docs/ios-testflight-setup.md)"; exit 1; fi
+
+      # The art packs are licensed for the game, not for a public repo, so
+      # they live in their own private repo.
+      - name: Get the art packs
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.ASSETS_REPO }}
+          token: ${{ secrets.ASSETS_REPO_TOKEN }}
+          path: scenes/assets
+
+      - name: Cache Godot and the iOS template
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_RELEASE }}-ios
+
+      - name: Download Godot and the iOS template
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_RELEASE}"
+          mkdir -p ~/godot
+          curl -fsSL -o /tmp/godot.zip "$base/Godot_v${GODOT_RELEASE}_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          mv ~/godot/Godot_v${GODOT_RELEASE}_linux.x86_64 ~/godot/godot
+          # The template bundle is ~1 GB; keep only the iOS part.
+          curl -fsSL -o /tmp/templates.tpz "$base/Godot_v${GODOT_RELEASE}_export_templates.tpz"
+          dir=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$dir"
+          unzip -q -j /tmp/templates.tpz templates/ios.zip templates/version.txt -d "$dir"
+          rm /tmp/templates.tpz /tmp/godot.zip
+
+      - name: Fill in the team, bundle id and build number
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          sed -i \
+            -e "s|^application/app_store_team_id=.*|application/app_store_team_id=\"$TEAM\"|" \
+            -e "s|^application/bundle_identifier=.*|application/bundle_identifier=\"$BUNDLE_ID\"|" \
+            -e "s|^application/version=.*|application/version=\"${{ github.run_number }}\"|" \
+            export_presets.cfg
+
+      - name: Import the project
+        run: ~/godot/godot --headless --path . --import
+
+      - name: Export the Xcode project
+        run: |
+          mkdir -p build/ios
+          ~/godot/godot --headless --path . --export-release "iOS" build/ios/MagicWar.xcodeproj
+          test -d build/ios/MagicWar.xcodeproj || { echo "::error::Godot did not write the Xcode project"; exit 1; }
+
+      - name: Pack the Xcode project
+        run: tar -C build -czf ios-project.tgz ios
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-project
+          path: ios-project.tgz
+          retention-days: 1
+          compression-level: 0  # Already gzipped
+
+  testflight:
+    needs: export
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ios-project
+
+      - name: Unpack the Xcode project
+        run: tar -xzf ios-project.tgz
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install the App Store Connect API key
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          KEY_P8: ${{ secrets.APP_STORE_CONNECT_KEY_P8 }}
+          ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          [ -n "$KEY_ID" ] && [ -n "$KEY_P8" ] && [ -n "$ISSUER" ] || {
+            echo "::error::Missing APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID or APP_STORE_CONNECT_KEY_P8"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s\n' "$KEY_P8" > "$RUNNER_TEMP/keys/AuthKey_$KEY_ID.p8"
+          echo "KEY_PATH=$RUNNER_TEMP/keys/AuthKey_$KEY_ID.p8" >> "$GITHUB_ENV"
+
+      - name: Archive (signed automatically through the API key)
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          xcodebuild archive \
+            -project ios/MagicWar.xcodeproj \
+            -scheme MagicWar \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$RUNNER_TEMP/MagicWar.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER" \
+            DEVELOPMENT_TEAM="$TEAM" \
+            CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            | tee "$RUNNER_TEMP/archive.log" | grep -E "error:|warning: .*sign|ARCHIVE (SUCCEEDED|FAILED)" || true
+          test -d "$RUNNER_TEMP/MagicWar.xcarchive" || { echo "::error::Archive failed (full log in the ios-logs artifact)"; exit 1; }
+
+      - name: Export and upload to TestFlight
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          DESTINATION: ${{ inputs.upload && 'upload' || 'export' }}
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>$DESTINATION</string>
+            <key>teamID</key><string>$TEAM</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/MagicWar.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER" \
+            2>&1 | tee "$RUNNER_TEMP/export.log" | grep -E "error|Upload|EXPORT (SUCCEEDED|FAILED)" || true
+          grep -q "EXPORT SUCCEEDED" "$RUNNER_TEMP/export.log" || { echo "::error::Export/upload failed (full log in the ios-logs artifact)"; exit 1; }
+          echo "Build ${{ github.run_number }}: ${DESTINATION}ed. It appears in App Store Connect > TestFlight after Apple processes it (usually 5-30 minutes)."
+
+      - name: Keep the .ipa (build-only runs)
+        if: ${{ !inputs.upload }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: MagicWar-ipa
+          path: ${{ runner.temp }}/export/*.ipa
+          retention-days: 3
+
+      - name: Keep the build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-logs
+          path: ${{ runner.temp }}/*.log
+          retention-days: 7
+
+      - name: Remove the API key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/keys"

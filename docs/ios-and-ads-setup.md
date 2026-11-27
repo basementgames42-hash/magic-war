@@ -1,5 +1,9 @@
 # Getting Magic War onto iOS with real ads
 
+> **Update:** iOS builds no longer need a Mac. GitHub Actions builds, signs
+> and uploads to TestFlight: see `docs/ios-testflight-setup.md`, which
+> replaces Steps 1-3 and 5 below. The real-ads steps (Step 4) still apply.
+
 Where things stood on 2026-10-30, and what to do when you come back to this.
 
 ## What is already done
