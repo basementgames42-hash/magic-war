@@ -477,8 +477,13 @@ func brain_blink(to_player: Vector2) -> Vector2:
 	return to_player.normalized()
 
 func teleport_near_player(distance: float) -> void:
+	# Only to a spot its whole body fits; with none nearby it reappears where
+	# it vanished rather than inside a wall.
+	var spot: Variant = get_parent().open_spot_near(player.global_position, distance,
+		get_parent().body_radius(self))
 	FX.burst(get_parent(), global_position, Color(0.8, 0.3, 1.0), 14, 180.0, 0.35, 0.25)
-	global_position = get_parent().open_spot_near(player.global_position, distance)
+	if spot != null:
+		global_position = spot
 	FX.burst(get_parent(), global_position, Color(0.8, 0.3, 1.0), 14, 180.0, 0.35, 0.25)
 
 # Hex Shaman: closes in casting bolts that curve after you.

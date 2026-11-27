@@ -11,6 +11,7 @@ const UNLOCK_TOAST = preload("res://scenes/ui/unlock_toast.gd")
 const BOSS_HUD = preload("res://scenes/ui/boss_hud.gd")
 const FX = preload("res://scenes/spells/spell_fx.gd")
 const ELITE_SCALE: float = 2.5  # Elite size compared with a normal enemy
+const ENEMY_RADIUS: float = 40.0  # Enemy collision circle at scale 1 (enemy.tscn)
 
 @export var spawn_distance: float = 800.0
 @export var elite_interval: float = 60.0    # An elite every minute
@@ -145,9 +146,8 @@ func _process(delta: float) -> void:
 		check_unlocks()
 
 	# Elite alarm.
-	if elapsed >= next_elite_at:
-		next_elite_at += elite_interval
-		spawn_elite()
+	if elapsed >= next_elite_at and spawn_elite():
+		next_elite_at += elite_interval  # Not placed yet: tries again next frame
 
 func update_clock() -> void:
 	# Endless counts up (how long you've lasted). A map counts down to the
@@ -371,7 +371,7 @@ func boss_name() -> String:
 func spawn_boss() -> void:
 	# A giant version of the map's last enemy type, with its own brain, a
 	# name, a health bar, boss music and a "BOSS INCOMING" announcement.
-	boss_spawned = true
+	# No clear spot for its huge body this frame: _process tries again next frame.
 	var final_type: Dictionary = enemy_order.back()
 	var spawning: Dictionary = enemy_type
 	enemy_type = final_type  # make_enemy() builds whatever enemy_type is
@@ -391,6 +391,10 @@ func spawn_boss() -> void:
 	var frame_height: float = boss.custom_frames.get_frame_texture(&"run", 0).get_height()
 	# Swapped with the last elite's size (see spawn_elite).
 	boss.scale = Vector2.ONE * ELITE_SCALE * minf(192.0 / frame_height, 1.0)
+	if not place_enemy(boss):
+		boss = null
+		return
+	boss_spawned = true
 	boss.killed.connect(_on_boss_killed)
 	add_child(boss)
 	boss_hud.announce(boss_name(), boss)
@@ -425,23 +429,33 @@ func run_stats() -> Dictionary:
 		"kills": kills,
 	}
 
-func spawn_point() -> Vector2:
-	return open_spot_near(player.global_position, spawn_distance)
+func spawn_point(radius: float = ENEMY_RADIUS) -> Variant:
+	return open_spot_near(player.global_position, spawn_distance, radius)
 
-func open_spot_near(center: Vector2, distance: float) -> Vector2:
-	# A spot `distance` from `center`, inside the arena and not inside a
-	# building/tree. Tries a few random angles before giving up.
+func open_spot_near(center: Vector2, distance: float, radius: float = ENEMY_RADIUS) -> Variant:
+	# A spot about `distance` from `center`, inside the arena, where a body of
+	# `radius` fits without touching any building, tree or rock. Tries random
+	# angles (later ones a bit nearer or farther too). Returns null when
+	# nowhere fits: callers then skip or retry rather than place something
+	# inside a wall, where it would stick or jitter.
 	var space := get_world_2d().direct_space_state
-	var query := PhysicsPointQueryParameters2D.new()
+	var body := CircleShape2D.new()
+	body.radius = radius
+	var query := PhysicsShapeQueryParameters2D.new()
+	query.shape = body
 	query.collision_mask = 4 | 8  # Obstacles and rocks (see prop.gd)
-	var pos: Vector2 = Vector2.ZERO
-	for attempt in 8:
-		var angle: float = randf() * TAU
-		pos = $World.clamp_to_arena(center + Vector2.from_angle(angle) * distance, 80.0)
-		query.position = pos
-		if space.intersect_point(query, 1).is_empty():
+	var margin: float = maxf(80.0, radius + 20.0)
+	for attempt in 12:
+		var reach: float = distance if attempt < 6 else distance * randf_range(0.8, 1.35)
+		var pos: Vector2 = $World.clamp_to_arena(center + Vector2.from_angle(randf() * TAU) * reach, margin)
+		query.transform = Transform2D(0.0, pos)
+		if space.intersect_shape(query, 1).is_empty():
 			return pos
-	return pos
+	return null
+
+static func body_radius(enemy: Node2D) -> float:
+	# Collision radius after scaling (elites and bosses are much bigger).
+	return ENEMY_RADIUS * absf(enemy.scale.x)
 
 func _on_spawn_timer_timeout() -> void:
 	if run_over or get_tree().get_node_count_in_group("enemies") >= enemy_cap():
@@ -486,9 +500,18 @@ func make_enemy() -> CharacterBody2D:
 	enemy.ai = enemy_type["ai"]
 	enemy.flat_hit = enemy_type.get("flat_damage", false)
 	enemy.variant_tint = enemy_type.get("tint", Color.WHITE)
-	enemy.global_position = spawn_point()
 	enemy.killed.connect(_on_enemy_killed)
-	return enemy
+	return enemy  # Callers place it once its size is final (place_enemy)
+
+func place_enemy(enemy: CharacterBody2D) -> bool:
+	# Puts an enemy at a clear spot that fits its full (scaled) body. False if
+	# none was found; the enemy is then freed and the caller tries later.
+	var spot: Variant = spawn_point(body_radius(enemy))
+	if spot == null:
+		enemy.free()
+		return false
+	enemy.global_position = spot
+	return true
 
 static func enemy_cap() -> int:
 	return BALANCE.max_enemies_web if OS.has_feature("web") else BALANCE.max_enemies
@@ -505,11 +528,13 @@ func spawn_enemy() -> void:
 	enemy.max_health += int(elapsed / 60.0) * BALANCE.enemy_health_per_minute
 	apply_scaling(enemy)
 
-	add_child(enemy)
+	if place_enemy(enemy):  # No clear spot: skipped, the next tick spawns one
+		add_child(enemy)
 
-func spawn_elite() -> void:
+func spawn_elite() -> bool:
+	# False if there was no clear spot for its big body; _process retries.
 	if player == null:
-		return
+		return true
 	# An elite is a regular enemy with cranked stats — no new scene needed.
 	var elite: CharacterBody2D = make_enemy()
 	elite.coin_drop = BALANCE.coins_per_elite
@@ -533,7 +558,10 @@ func spawn_elite() -> void:
 	elite.scale = Vector2.ONE * elite_size * minf(192.0 / frame_height, 1.0)
 	apply_scaling(elite)
 
+	if not place_enemy(elite):
+		return false
 	add_child(elite)
+	return true
 
 func fit_hud() -> void:
 	# Too narrow for the clock beside the health bar: it drops to the next row.
