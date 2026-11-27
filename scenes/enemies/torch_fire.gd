@@ -1,73 +1,149 @@
 extends "res://scenes/enemies/enemy_hazard.gd"
 # Torch Fire: the blaze a Torch Goblin (and its giant elite) leaves behind.
 # Same timing and damage as any lingering hazard; only the look is its own:
-# a scorched patch with glowing cracks, flickering tongues of flame, the pack's
-# fire bursts popping across it, rising embers and a heat glow. Bigger patches
-# (elites) get more of everything. It dies down to smoke at the end.
+# a scorched patch with glowing cracks, a cluster of flickering flames and a
+# heat glow. Bigger patches (elites) get bigger and more flames. It dies down
+# to smoke at the end.
+#
+# Built to stay cheap however many goblins there are:
+#   - The scorch, cracks and warning ring are drawn ONCE, into their own
+#     layers. After that only their opacity changes (no redrawing).
+#   - The flames are a few looping sprites from the pack's fire sheets, made
+#     once per patch; nothing new is created while it burns.
+#   - At most MAX_BURNING patches burn at once. A new one makes the oldest
+#     die down early, so a big crowd can't stack up unlimited fires.
 
 const FIRE_SHEETS: Array[Texture2D] = [
-	preload("res://scenes/assets/Tiny Swords (Free Pack)/Tiny Swords (Free Pack)/Particle FX/Fire_01.png"),
 	preload("res://scenes/assets/Tiny Swords (Free Pack)/Tiny Swords (Free Pack)/Particle FX/Fire_02.png"),
 	preload("res://scenes/assets/Tiny Swords (Free Pack)/Tiny Swords (Free Pack)/Particle FX/Fire_03.png"),
 ]
 const DUST_SHEET: Texture2D = preload("res://scenes/assets/Tiny Swords (Free Pack)/Tiny Swords (Free Pack)/Particle FX/Dust_01.png")
 const SCORCH := Color(0.13, 0.07, 0.04)
 const EMBER := Color(1.0, 0.42, 0.08)
-const FLAME_RED := Color(0.86, 0.2, 0.05)
 const FLAME_ORANGE := Color(1.0, 0.55, 0.1)
-const FLAME_CORE := Color(1.0, 0.93, 0.55)
 const DIE_DOWN: float = 0.6  # Seconds at the end for the flames to sink away
-# Performance: a crowd of Torch Goblins keeps many patches burning at once.
-# Past this many, the extra fire-burst sprites are shared out between them
-# (same overall amount on screen), so the cost stays flat however many burn.
-const BUSY_FIRES: int = 8
-const MAX_FLAMES: int = 9
+const TICK: float = 1.0      # Seconds between burns while standing in the fire
+const MAX_BURNING: int = 40  # Patches allowed to burn at once (about 12+ goblins before it kicks in)
+# The bright part of each fire sheet (later frames turn to smoke), played
+# forward and back so the flame flickers up and down without a jump.
+const FLAME_LOOP: Array[int] = [1, 2, 3, 4, 5, 4, 3, 2]
 
-static var burning: int = 0  # Torch fires alive right now
+static var burning: Array = []        # Live patches, oldest first
+static var flame_frames: Dictionary = {}  # Sheet id -> shared SpriteFrames
 
-var flames: Array = []   # [offset, height (0-1), phase]
 var scorch: PackedVector2Array
-var cracks: Array = []   # [angle, length (0-1 of radius)]
-var puff_timer: float = 0.0
-var embers: CPUParticles2D
+var ground: Node2D   # Scorch mark (drawn once)
+var cracks: Node2D   # Glowing cracks (drawn once; pulses by opacity)
+var ring: Node2D     # Warning ring while it catches (drawn once)
+var flames: Node2D   # Holds the flame sprites
 var heat: Sprite2D
 
 func _ready() -> void:
 	super()
-	burning += 1
-	var count: int = clampi(int(radius / 12.0), 5, MAX_FLAMES)
-	for i in count:
-		var spot: Vector2 = Vector2.from_angle(randf() * TAU) * radius * sqrt(randf()) * 0.75
-		flames.append([spot, randf_range(0.6, 1.0), randf() * TAU])
-	flames.sort_custom(func(a, b): return a[0].y < b[0].y)  # Back flames drawn first
+	redraw_every_frame = false
+	tick = TICK  # Burns you once a second while you stand in it (hazards default to 0.6 s)
+	burning.append(self)
+	cap_fires()
 	for i in 16:
 		scorch.append(Vector2.from_angle(TAU / 16 * i) * radius * randf_range(0.82, 1.04))
-	for i in 7:
-		cracks.append([randf() * TAU, randf_range(0.45, 0.9)])
 	heat = FX.glow_sprite(Color(1.0, 0.45, 0.1, 0.0), radius * 2.6)
 	heat.show_behind_parent = true
 	add_child(heat)
-	embers = CPUParticles2D.new()
-	embers.texture = FX.glow_texture()
-	embers.material = FX.additive_material()
-	embers.amount = count * 2
-	embers.lifetime = 1.1
-	embers.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
-	embers.emission_sphere_radius = radius * 0.7
-	embers.direction = Vector2.UP
-	embers.spread = 25.0
-	embers.gravity = Vector2(0, -70)
-	embers.initial_velocity_min = 25.0
-	embers.initial_velocity_max = 80.0
-	embers.scale_amount_min = 0.1
-	embers.scale_amount_max = 0.25
-	embers.color = EMBER
-	embers.color_ramp = FX.fade_ramp()
-	embers.emitting = false
-	add_child(embers)
+	ground = layer(draw_ground)
+	ground.modulate.a = 0.0
+	cracks = layer(draw_cracks)
+	cracks.modulate.a = 0.0
+	ring = layer(draw_ring)
+	build_flames()
 
 func _exit_tree() -> void:
-	burning -= 1
+	burning.erase(self)
+
+# --- Cap ----------------------------------------------------------------------
+
+func dying() -> bool:
+	return age >= fuse + linger - DIE_DOWN
+
+func cap_fires() -> void:
+	# Too many still going strong: the oldest one starts dying down now.
+	var strong: Array = burning.filter(func(f): return is_instance_valid(f) and not f.dying())
+	if strong.size() > MAX_BURNING:
+		strong[0].burn_out()
+
+func burn_out() -> void:
+	age = maxf(age, fuse + linger - DIE_DOWN)
+
+# --- Building (once) ------------------------------------------------------------
+
+func layer(painter: Callable) -> Node2D:
+	# A child that draws itself once; only its opacity changes afterwards.
+	var n := Node2D.new()
+	n.draw.connect(painter.bind(n))
+	add_child(n)
+	return n
+
+func draw_ground(n: Node2D) -> void:
+	# Scorch mark in soft layers: faint sooty edge, darker burnt middle.
+	n.draw_colored_polygon(scorch, Color(SCORCH, 0.32))
+	n.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * 0.78)
+	n.draw_colored_polygon(scorch, Color(SCORCH, 0.4))
+	n.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * 0.5)
+	n.draw_colored_polygon(scorch, Color(SCORCH, 0.35))
+
+func draw_cracks(n: Node2D) -> void:
+	for i in 7:
+		var dir := Vector2.from_angle(randf() * TAU)
+		var length: float = randf_range(0.45, 0.9)
+		var mid: Vector2 = dir * radius * length * 0.5 + dir.orthogonal() * radius * 0.08
+		var end: Vector2 = dir * radius * length
+		n.draw_line(dir * radius * 0.08, mid, EMBER, 3.0)
+		n.draw_line(mid, end, Color(EMBER, 0.7), 2.0)
+
+func draw_ring(n: Node2D) -> void:
+	n.draw_arc(Vector2.ZERO, radius, 0.0, TAU, 48, Color(EMBER, 0.8), 3.0)
+
+static func frames_for(sheet: Texture2D) -> SpriteFrames:
+	var key: int = sheet.get_instance_id()
+	if flame_frames.has(key):
+		return flame_frames[key]
+	var frames := SpriteFrames.new()
+	frames.add_animation(&"burn")
+	frames.set_animation_speed(&"burn", 12.0)
+	frames.set_animation_loop(&"burn", true)
+	var size: int = sheet.get_height()  # Square frames in one row
+	for i in FLAME_LOOP:
+		var atlas := AtlasTexture.new()
+		atlas.atlas = sheet
+		atlas.region = Rect2(i * size, 0, size, size)
+		frames.add_frame(&"burn", atlas)
+	flame_frames[key] = frames
+	return frames
+
+func build_flames() -> void:
+	flames = Node2D.new()
+	flames.modulate.a = 0.0
+	add_child(flames)
+	var count: int = clampi(int(radius / 20.0), 3, 7)
+	var spots: Array = []
+	for i in count:
+		spots.append(Vector2.from_angle(randf() * TAU) * radius * sqrt(randf()) * 0.65)
+	spots.sort_custom(func(a, b): return a.y < b.y)  # Back flames drawn first
+	var size: float = clampf(radius / 52.0, 0.9, 2.4)
+	for spot in spots:
+		var flame := AnimatedSprite2D.new()
+		flame.sprite_frames = frames_for(FIRE_SHEETS.pick_random())
+		flame.position = spot
+		flame.offset = Vector2(0, -22)  # The flame's foot sits on its spot
+		flame.scale = Vector2.ONE * size * randf_range(0.85, 1.15)
+		flame.flip_h = randf() < 0.5
+		flame.speed_scale = randf_range(0.85, 1.2)
+		# Warm the pack's yellow flames toward orange-red, a little different each.
+		flame.modulate = Color(1.0, 0.85, 0.7).lerp(Color(1.0, 0.6, 0.45), randf())
+		flames.add_child(flame)
+		flame.play(&"burn")
+		flame.frame = randi() % FLAME_LOOP.size()  # Out of step with its neighbours
+
+# --- Every frame (opacity and scale only) ------------------------------------------
 
 func _process(delta: float) -> void:
 	var was_burning: bool = age >= fuse
@@ -75,92 +151,30 @@ func _process(delta: float) -> void:
 		# Last frame: a puff of smoke where the fire was.
 		FX.play_sheet(get_parent(), global_position, DUST_SHEET, 14.0, clampf(radius / 60.0, 1.0, 2.5))
 	super(delta)
-	if is_queued_for_deletion() or age < fuse:
+	if is_queued_for_deletion():
+		return
+	if age < fuse:
+		# Catching: the patch smoulders and small flames rise as the fuse burns.
+		var catching: float = age / fuse if fuse > 0.0 else 1.0
+		ground.modulate.a = 0.45 * catching
+		flames.modulate.a = 0.6 * catching
+		flames.scale = Vector2.ONE * (0.35 + 0.3 * catching)
 		return
 	if not was_burning:
 		ignite()
 	var left: float = fuse + linger - age
-	heat.modulate.a = 0.5 * clampf(left / DIE_DOWN, 0.0, 1.0) * (0.85 + 0.15 * sin(age * 13.0))
-	if left < DIE_DOWN:
-		embers.emitting = false
-		return
-	# The pack's fire bursts popping up across the patch.
-	puff_timer -= delta
-	if puff_timer <= 0.0:
-		# Bigger (elite) patches get bigger bursts, not more of them.
-		puff_timer = randf_range(0.2, 0.4)
-		if burning > BUSY_FIRES and randf() > float(BUSY_FIRES) / burning:
-			return
-		var spot: Vector2 = Vector2.from_angle(randf() * TAU) * radius * sqrt(randf()) * 0.7
-		FX.play_sheet(get_parent(), global_position + spot, FIRE_SHEETS.pick_random(),
-			randf_range(14.0, 20.0), clampf(radius / 70.0, 0.8, 2.2))
-
-func ignite() -> void:
-	embers.emitting = true
-	FX.burst(get_parent(), global_position, FLAME_ORANGE, 14, radius * 2.0, 0.35, 0.3)
-
-func _draw() -> void:
-	if age < fuse:
-		# Catching: the patch smoulders and the flames rise as the fuse burns.
-		var catching: float = age / fuse if fuse > 0.0 else 1.0
-		draw_colored_polygon(scorch, Color(SCORCH, 0.45 * catching))
-		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 48, Color(EMBER, 0.8), 3.0)
-		draw_flames(catching * 0.5, 1.0)
-		return
-	var left: float = fuse + linger - age
 	var fade: float = clampf(left / DIE_DOWN, 0.0, 1.0)
 	var rise: float = minf((age - fuse) / 0.2, 1.0)  # Flames leap up as it catches
-	# Scorch mark in soft layers: faint sooty edge, darker burnt middle.
-	draw_colored_polygon(scorch, Color(SCORCH, 0.32))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * 0.78)
-	draw_colored_polygon(scorch, Color(SCORCH, 0.4))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE * 0.5)
-	draw_colored_polygon(scorch, Color(SCORCH, 0.35))
-	draw_set_transform(Vector2.ZERO, 0.0)
-	# Glowing cracks in the burnt ground, pulsing like coals.
-	var pulse: float = 0.6 + 0.4 * sin(age * 5.0)
-	for crack in cracks:
-		var dir := Vector2.from_angle(crack[0])
-		var bend: Vector2 = dir.orthogonal() * radius * 0.08
-		var mid: Vector2 = dir * radius * crack[1] * 0.5 + bend
-		var end: Vector2 = dir * radius * crack[1]
-		var c := Color(EMBER, pulse * (0.4 + 0.6 * fade))
-		draw_line(dir * radius * 0.08, mid, c, 3.0)
-		draw_line(mid, end, Color(c, c.a * 0.7), 2.0)
-	draw_flames(rise * fade, fade)
+	ground.modulate.a = fade
+	cracks.modulate.a = (0.6 + 0.4 * sin(age * 5.0)) * (0.4 + 0.6 * fade)  # Coals pulsing
+	heat.modulate.a = 0.5 * fade * (0.85 + 0.15 * sin(age * 13.0))
+	flames.modulate.a = fade
+	flames.scale = Vector2.ONE * lerpf(0.65, 1.0, rise) * (0.55 + 0.45 * fade)
 
-func draw_flames(size: float, alpha: float) -> void:
-	if size <= 0.01:
-		return
-	var scale_up: float = clampf(radius / 58.0, 1.0, 2.6)
-	for f in flames:
-		var flicker: float = 0.8 + 0.2 * sin(age * 17.0 + f[2]) + 0.1 * sin(age * 29.0 + f[2] * 2.0)
-		var height: float = 40.0 * f[1] * flicker * size * scale_up
-		var width: float = 10.0 * scale_up * (0.7 + 0.3 * size)
-		var sway: float = sin(age * 6.0 + f[2]) * width * 0.6
-		draw_colored_polygon(tongue(f[0], width, height, sway), Color(FLAME_RED, 0.9 * alpha))
-		draw_colored_polygon(tongue(f[0] + Vector2(0, 1), width * 0.68, height * 0.7, sway * 0.8),
-			Color(FLAME_ORANGE, 0.95 * alpha))
-		draw_colored_polygon(tongue(f[0] + Vector2(0, 2), width * 0.36, height * 0.4, sway * 0.5),
-			Color(FLAME_CORE, alpha))
+func ignite() -> void:
+	if is_instance_valid(ring):
+		ring.queue_free()
+	FX.burst(get_parent(), global_position, FLAME_ORANGE, 10, radius * 2.0, 0.35, 0.3)
 
-func tongue(base: Vector2, width: float, height: float, sway: float) -> PackedVector2Array:
-	# A licking flame: a round bottom, sides that bulge out then curl in to a
-	# tip, and the whole flame bending with `sway` (more toward the tip).
-	# One loop, no repeated points: up the right side to the tip, down the
-	# left side, then round the bottom back toward where it started.
-	var points := PackedVector2Array()
-	var steps: int = 5  # Points per side: enough for the curve at this size
-	for i in steps + 1:                  # Right base (t=0) up to the tip (t=1)
-		points.append(base + flame_side(float(i) / steps, width, height, sway, 1.0))
-	for i in range(steps - 1, -1, -1):   # Left side, just below the tip down to its base
-		points.append(base + flame_side(float(i) / steps, width, height, sway, -1.0))
-	for i in range(1, 4):                # Round bottom, left to right (ends excluded)
-		var a: float = PI * float(i) / 4.0
-		points.append(base + Vector2(-cos(a) * width, sin(a) * width * 0.55))
-	return points
-
-func flame_side(t: float, width: float, height: float, sway: float, side: float) -> Vector2:
-	# t = 0 at the base, 1 at the tip. Fattest a third of the way up.
-	var half: float = width * pow(1.0 - t, 0.75) * (1.0 + 0.45 * sin(t * PI))
-	return Vector2(side * half + sway * t * t, -height * t)
+func _draw() -> void:
+	pass  # Everything is in the layers and sprites above

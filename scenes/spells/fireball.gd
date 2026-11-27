@@ -9,6 +9,8 @@ const EXPLOSION_SHEET: Texture2D = preload("res://scenes/assets/Tiny Swords (Fre
 
 @export var speed: float = 500.0
 @export var damage: int = 1
+var crit: bool = false  # A Keen Eye critical hit (set by the player)
+const CritPopup = preload("res://scenes/ui/crit_popup.gd")
 @export var lifetime: float = 2.0  # Seconds before despawning if it misses
 
 # Set by the player when firing — which way to fly.
@@ -67,6 +69,8 @@ func _on_body_entered(body: Node2D) -> void:
 	# and we spawn on top of them!
 	if body.is_in_group("enemies"):
 		body.take_damage(damage)
+		if crit:
+			CritPopup.spawn(body.global_position)
 		splash(body)
 		explode()
 		queue_free()

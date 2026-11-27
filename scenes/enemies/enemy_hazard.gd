@@ -19,6 +19,7 @@ var ranged: bool = false       # Thrown from afar (a lobbed bomb): hits as a ran
 var player: Node2D = null
 var age: float = 0.0
 var tick_timer: float = 0.0
+var redraw_every_frame: bool = true  # Looks built from sprites (torch fire) turn this off
 
 func _ready() -> void:
 	z_index = -1  # On the ground: under the characters, above the grass
@@ -30,7 +31,8 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	age += delta
-	queue_redraw()
+	if redraw_every_frame:
+		queue_redraw()
 	if age < fuse:
 		return
 	if linger <= 0.0:

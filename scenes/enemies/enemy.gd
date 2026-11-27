@@ -438,14 +438,16 @@ func brain_shell(to_player: Vector2) -> Vector2:
 	return to_player.normalized()
 
 # Giant Bat: circles overhead, then swoops straight through you and out.
+const SWOOP_SPEED: float = 2.0  # Swoop speed x its normal speed (was 2.8: too fast to react to)
 func brain_swoop(to_player: Vector2) -> Vector2:
 	if ai_state == 1:
-		speed_factor = 2.8
+		speed_factor = SWOOP_SPEED
 		if ai_timer <= 0.0:
 			enter_state(0, randf_range(1.6, 2.6))
 		return ai_dir
 	if ai_timer <= 0.0:
-		enter_state(1, (to_player.length() + 280.0) / (move_speed * 2.8))
+		# Long enough to fly the same distance as before, just slower.
+		enter_state(1, (to_player.length() + 280.0) / (move_speed * SWOOP_SPEED))
 		ai_dir = to_player.normalized()
 	var radial: float = clampf((to_player.length() - 300.0) / 150.0, -1.0, 1.0)
 	return (to_player.normalized() * radial + to_player.normalized().orthogonal()).normalized()

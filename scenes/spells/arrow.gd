@@ -8,6 +8,8 @@ var texture: Texture2D
 var direction: Vector2 = Vector2.RIGHT
 var speed: float = 720.0
 var damage: int = 1
+var crit: bool = false  # A Keen Eye critical hit (set by the player)
+const CritPopup = preload("res://scenes/ui/crit_popup.gd")
 var pierce: int = 3
 var lifetime: float = 1.3
 
@@ -33,6 +35,9 @@ func _on_body_entered(body: Node2D) -> void:
 	if not body.is_in_group("enemies") or pierce <= 0:
 		return
 	body.take_damage(damage)
+	if crit:
+		CritPopup.spawn(body.global_position)
+		crit = false  # Once per arrow, even when it pierces
 	pierce -= 1
 	Audio.play("orb_hit", -11.0, 0.15)
 	FX.burst(get_parent(), body.global_position, Color(1.0, 0.9, 0.6), 5, 140.0, 0.2, 0.18)
