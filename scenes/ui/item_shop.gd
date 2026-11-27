@@ -14,7 +14,7 @@ var tab: String = "items"
 var panel: PanelContainer
 var hint_label: Label
 const HINTS: Dictionary = {
-	"items": "Spend coins. Boosts last for your next run only.",
+	"items": "Spend coins. Hold one of each, kept until used. Boosts work for your next run.",
 	"premium": "Spend gems. Bought once, kept forever. Earn gems from Daily Quests.",
 	"gems": "Trade gems and coins. Packs are optional: everything can be earned by playing.",
 }
@@ -104,10 +104,19 @@ func refresh() -> void:
 
 func price_button(cost: int, gems: bool) -> Button:
 	var b := Button.new()
-	b.text = str(cost)
+	b.text = with_commas(cost)
 	b.icon = ShopUI.icon(ShopCatalog.GEM_ICON, 30) if gems else ShopUI.icon("coin_gold", 30)
 	b.disabled = (GameData.gems if gems else GameData.coins) < cost
 	return b
+
+static func with_commas(n: int) -> String:
+	# 3000 -> "3,000", 20000 -> "20,000".
+	var s: String = str(absi(n))
+	var out: String = ""
+	while s.length() > 3:
+		out = "," + s.substr(s.length() - 3) + out
+		s = s.substr(0, s.length() - 3)
+	return ("-" if n < 0 else "") + s + out
 
 func done_button(text: String) -> Button:
 	var b := Button.new()
@@ -120,14 +129,11 @@ func build_items() -> void:
 		var id: String = item["id"]
 		var tag: String = ""
 		var b: Button
-		if item["kind"] == "stock":
-			tag = "%d / %d" % [GameData.stock_count(id), item["max"]]
-			b = done_button("Full") if GameData.stock_count(id) >= item["max"] 				else price_button(item["cost"], false)
-		elif GameData.is_armed(id):
-			tag = "Next run"
-			b = done_button("Ready")
-		else:
-			b = price_button(item["cost"], false)
+		# How many you hold out of the most you can: "0 / 1", "1 / 1".
+		var held: int = GameData.stock_count(id) if item["kind"] == "stock" else int(GameData.is_armed(id))
+		var limit: int = item.get("max", 1)
+		tag = "%d / %d" % [held, limit]
+		b = done_button("Owned") if held >= limit else price_button(item["cost"], false)
 		if not b.disabled:
 			b.pressed.connect(func():
 				if GameData.buy_consumable(id):
@@ -158,7 +164,6 @@ func build_gems() -> void:
 	list.add_child(ShopUI.card(ShopUI.icon(chest["icon"]), chest["name"], chest["desc"], cb))
 	var ex: Dictionary = ShopCatalog.GEM_EXCHANGE
 	var eb: Button = price_button(ex["coins"], false)
-	eb.text = "20,000" if ex["coins"] == 20000 else str(ex["coins"])
 	eb.pressed.connect(func():
 		if GameData.buy_gem_with_coins():
 			Audio.play("level_up", 0.0, 0.0)
