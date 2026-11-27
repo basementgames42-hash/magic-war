@@ -2,12 +2,12 @@ extends CanvasLayer
 # Level-Up Menu: pauses the game, offers 3 random upgrades.
 # Spell unlocks are marked "once" and leave the pool after being taken.
 # Entries with a "weapon" can be picked again to level that weapon up.
-# A run may add at most BALANCE.max_extra_weapons new weapons (spells and
+# A run may add at most weapon_limit() new weapons (spells and
 # level-up weapons) to the hero's own. Once that many are taken the rest
 # leave the pool for good; upgrades to the ones you have keep coming.
 # Past BALANCE.epic_min_level, with 2+ additional weapons, a level-up may
 # swap one choice for a purple Epic Combo of two of them (epic_combo.gd),
-# up to BALANCE.max_epics per run.
+# up to epic_limit() per run (Endless allows more: see BALANCE).
 # Endless only: from BALANCE.god_min_level, once three additional weapons
 # are taken, one level-up offers three gold God-Tier Combos instead
 # (god_combo.gd), one led by each weapon. One per run.
@@ -133,7 +133,7 @@ func epic_options() -> Array[String]:
 
 func maybe_offer_epic() -> void:
 	# Sometimes (never guaranteed) one of the three choices becomes an Epic.
-	if player.level <= BALANCE.epic_min_level or epics_taken.size() >= BALANCE.max_epics:
+	if player.level <= BALANCE.epic_min_level or epics_taken.size() >= epic_limit():
 		return
 	var options: Array[String] = epic_options()
 	if options.is_empty() or randf() >= BALANCE.epic_offer_chance:
@@ -144,6 +144,14 @@ func maybe_offer_epic() -> void:
 		"epic": id, "name": "EPIC: " + EPIC_COMBO.COMBOS[id][0],
 		"desc": "%s  (%s + %s)" % [EPIC_COMBO.COMBOS[id][1], WEAPON_NAMES[parts[0]], WEAPON_NAMES[parts[1]]],
 	}
+
+static func weapon_limit() -> int:
+	# Extra weapons a run may hold: more in Endless.
+	return BALANCE.endless_max_extra_weapons if GameData.endless else BALANCE.max_extra_weapons
+
+static func epic_limit() -> int:
+	# Epic Combos a run may get: more in Endless (its extra weapon makes more pairs).
+	return BALANCE.endless_max_epics if GameData.endless else BALANCE.max_epics
 
 const GOD_WEAPONS: int = 3  # A God-Tier is one lead weapon plus two infused ones
 
@@ -314,7 +322,7 @@ func is_new_weapon(choice: Dictionary) -> bool:
 	return choice.has("weapon") and player.weapon_level(choice["weapon"]) == 0
 
 func eligible(choice: Dictionary) -> bool:
-	if is_new_weapon(choice) and extra_weapons >= BALANCE.max_extra_weapons:
+	if is_new_weapon(choice) and extra_weapons >= weapon_limit():
 		return false
 	if choice.get("id", "") == "crit" and player.crit_chance >= BALANCE.crit_max:
 		return false
@@ -339,14 +347,14 @@ func describe(choice: Dictionary) -> String:
 	})
 	if is_new_weapon(choice):
 		# Which weapon slot this would fill, e.g. "slot 2 of 3".
-		text += "  (slot %d of %d)" % [extra_weapons + 1, BALANCE.max_extra_weapons]
+		text += "  (slot %d of %d)" % [extra_weapons + 1, weapon_limit()]
 	return text
 
 func took_new_weapon() -> void:
 	# One more weapon slot filled. At the limit, every weapon not taken
 	# leaves the pool for the rest of the run.
 	extra_weapons += 1
-	if extra_weapons >= BALANCE.max_extra_weapons:
+	if extra_weapons >= weapon_limit():
 		upgrade_pool = upgrade_pool.filter(func(c): return not is_new_weapon(c))
 
 func weapon_recap() -> Array[String]:

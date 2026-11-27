@@ -105,8 +105,9 @@ extends Resource
 @export_group("Level-Up Choices")
 ## Most additional weapons per run (spells and level-up weapons), on top of
 ## the hero's own. Once reached, no new weapons are offered; upgrades to the
-## ones you have still are.
-@export_range(1, 7) var max_extra_weapons: int = 4
+## ones you have still are. Regular maps use the first, Endless the second.
+@export_range(1, 7) var max_extra_weapons: int = 3
+@export_range(1, 7) var endless_max_extra_weapons: int = 4
 ## Keen Eye level-up: chance per pick that a main-weapon attack is a critical
 ## hit, up to Crit Max; crits deal Crit Multiplier times the damage.
 @export_range(0.0005, 0.25, 0.0005) var crit_chance_per_pick: float = 0.025
@@ -114,10 +115,11 @@ extends Resource
 @export_range(1.25, 4.0, 0.25) var crit_multiplier: float = 2.0
 ## Epic Combos (purple level-up choices made from two of the run's
 ## additional weapons): only offered once the player is past this level...
-## (4 extra weapons make 6 different pairs, so up to 6 Epics in a run.)
 @export_range(0, 50) var epic_min_level: int = 7
-## ...at most this many per run...
-@export_range(1, 6) var max_epics: int = 6
+## ...at most this many per run (regular maps, then Endless: Endless's 4
+## extra weapons make 6 different pairs, so up to 6 Epics there)...
+@export_range(1, 3) var max_epics: int = 2
+@export_range(1, 6) var endless_max_epics: int = 6
 ## ...and on this share of level-ups (when there's a pair not yet combined),
 ## so a run may get both, one or none.
 @export_range(0.05, 1.0, 0.05) var epic_offer_chance: float = 0.35
@@ -127,7 +129,7 @@ extends Resource
 ## additional weapons, Endless only): offered once, at the first level-up from
 ## this level with at least three weapons taken (the first three you took).
 ## Three choices at once, one per run.
-@export_range(1, 100) var god_min_level: int = 17
+@export_range(1, 100) var god_min_level: int = 15
 ## Multiplies every God-Tier Combo's damage.
 @export_range(0.25, 4.0, 0.05) var god_damage_scale: float = 1.0
 ## Extra God-Tier damage per player level past god_min_level (0.04 = +4%).
