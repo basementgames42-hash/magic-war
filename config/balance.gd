@@ -19,6 +19,9 @@ extends Resource
 ## Minutes the drift into the next map takes: the ground and foliage colours
 ## blend, and buildings, trees and rocks change a few at a time while off-screen.
 @export_range(0.1, 10.0, 0.1) var endless_blend_minutes: float = 0.5
+## Extra max health the hero starts every Endless run with (on top of
+## Vitality upgrades and the rest).
+@export_range(0, 100) var endless_bonus_hp: int = 10
 
 @export_group("Difficulty Scaling")
 ## Extra enemy health per player level above 1 (0.08 = +8% each level).
@@ -107,8 +110,8 @@ extends Resource
 @export_range(1, 7) var max_extra_weapons: int = 3
 ## Keen Eye level-up: chance per pick that a main-weapon attack is a critical
 ## hit, up to Crit Max; crits deal Crit Multiplier times the damage.
-@export_range(0.0005, 0.25, 0.0005) var crit_chance_per_pick: float = 0.0025
-@export_range(0.05, 1.0, 0.05) var crit_max: float = 0.25
+@export_range(0.0005, 0.25, 0.0005) var crit_chance_per_pick: float = 0.05
+@export_range(0.05, 1.0, 0.05) var crit_max: float = 0.5
 @export_range(1.25, 4.0, 0.25) var crit_multiplier: float = 2.0
 ## Epic Combos (purple level-up choices made from two of the run's
 ## additional weapons): only offered once the player is past this level...
