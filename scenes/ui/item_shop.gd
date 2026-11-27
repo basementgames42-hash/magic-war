@@ -172,7 +172,7 @@ func build_gems() -> void:
 	for pack in ShopCatalog.GEM_PACKS:
 		var id: String = pack["id"]
 		var b := Button.new()
-		b.text = pack["price"]
+		b.text = Store.price_text(id)  # The store's price, in the player's currency
 		b.pressed.connect(func():
 			Store.buy(id, func(paid: bool):
 				if paid:
@@ -188,7 +188,7 @@ func build_gems() -> void:
 		ab = done_button("Owned")
 	else:
 		ab = Button.new()
-		ab.text = all["price"]
+		ab.text = Store.price_text(all["id"])
 		ab.pressed.connect(func():
 			Store.buy(all["id"], func(paid: bool):
 				if paid:
@@ -196,3 +196,23 @@ func build_gems() -> void:
 				refresh()))
 	list.add_child(ShopUI.card(ShopUI.icon(all["icon"]), all["name"], all["desc"], ab,
 		"Owned" if owned_all else "Best value"))
+	# Restore Purchases: gets Unlock Everything back on a new phone or after a
+	# reinstall (the stores require this button).
+	var restore := Button.new()
+	restore.text = "Restore Purchases"
+	restore.custom_minimum_size = Vector2(260, 52)
+	restore.add_theme_font_size_override("font_size", 20)
+	restore.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	restore.pressed.connect(func():
+		restore.disabled = true
+		restore.text = "Checking..."
+		Store.restore(func(found: bool):
+			if not is_instance_valid(restore):
+				return
+			if found:
+				Audio.play("level_up", 0.0, 0.0)
+				refresh()
+			else:
+				restore.disabled = false
+				restore.text = "Nothing to restore"))
+	list.add_child(restore)

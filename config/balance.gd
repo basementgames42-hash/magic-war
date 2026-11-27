@@ -50,7 +50,7 @@ extends Resource
 @export_group("Ads")
 ## Watch-an-ad revives allowed per run. 0 turns the offer off; -1 = no
 ## limit (offered after every death).
-@export_range(-1, 10) var revives_per_run: int = -1
+@export_range(-1, 10) var revives_per_run: int = 2
 ## Seconds of invincibility after a revive, to get clear of the swarm.
 @export_range(0.0, 10.0, 0.5) var revive_invincible_seconds: float = 3.0
 ## How much a boost multiplies gold, EXP or pickup drop chance.

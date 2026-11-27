@@ -35,7 +35,8 @@ var enemy_type: Dictionary = {}             # The type spawning now
 var wave_interval: float = 60.0             # Seconds per enemy type, set in _ready
 var frames_cache: Dictionary = {}           # Enemy type name -> SpriteFrames
 var kills: int = 0                          # Enemies killed this run (HUD, top right)
-var revives_left: int = BALANCE.revives_per_run
+var revives_left: int = BALANCE.revives_per_run  # Ad revives left this run
+var first_death_done: bool = false  # A Second Chance / Phoenix only saves the first death
 var revive_offer: CanvasLayer
 var effect_icons: Control
 var ad_card: Control
@@ -290,12 +291,20 @@ func win_level() -> void:
 			stats, true)
 
 func _on_player_died() -> void:
-	# revives_left below 0 = unlimited (BALANCE.revives_per_run = -1).
-	# A Second Chance (Shop) works even where there are no ads.
+	# First death: a Phoenix Feather or Second Chance revives on its own, no
+	# questions. After that (or with neither), up to revives_per_run ad
+	# revives (below 0 = unlimited); once they are gone the run ends.
+	if not first_death_done:
+		first_death_done = true
+		var phoenix: bool = GameData.free_revive
+		if GameData.use_second_chance():
+			player.revive.call_deferred()  # After die() finishes hiding the player
+			show_map_banner("PHOENIX FEATHER!" if phoenix else "SECOND CHANCE!")
+			return
 	var ad: bool = revives_left != 0 and Ads.is_available()
-	if ad or GameData.second_chances() > 0:
+	if ad:
 		get_tree().paused = true
-		revive_offer.open(GameData.second_chances(), ad)
+		revive_offer.open(revives_left, ad)
 	else:
 		finish_run()
 
