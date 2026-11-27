@@ -68,7 +68,13 @@ func _ready() -> void:
 	panel.modulate.a = 0.0
 
 func _process(_delta: float) -> void:
-	if started or get_tree().paused:
+	if started:
+		# A menu opened while it shows (level-up, pause): hide until play resumes.
+		# Its tweens are set to stop while the game is paused, so it carries on
+		# from where it was.
+		panel.visible = not get_tree().paused
+		return
+	if get_tree().paused:
 		return  # Wait out menus and pauses
 	started = true
 	play()
@@ -79,13 +85,19 @@ func play() -> void:
 	panel.size = panel.get_combined_minimum_size()
 	var screen: Vector2 = get_viewport().get_visible_rect().size
 	var shrink: float = 0.72 if in_run else 1.0
+	# Never wider than the screen (phones), with a small margin each side.
+	shrink = minf(shrink, (screen.x - 24.0) / panel.size.x)
 	var shown: Vector2 = panel.size * shrink
-	var rest := Vector2((screen.x - shown.x) * 0.5, screen.y * 0.64 if in_run else 24.0)
 	panel.scale = Vector2.ONE * shrink
 	panel.pivot_offset = panel.size * 0.5
+	# The panel shrinks around its centre (the pivot), so place that centre:
+	# mid-screen across, and the shrunk panel's top edge at the wanted height.
+	var top: float = screen.y * 0.64 if in_run else 24.0
+	top = minf(top, screen.y - shown.y - 12.0)  # Keep it all on screen
+	var rest: Vector2 = Vector2(screen.x * 0.5, top + shown.y * 0.5) - panel.size * 0.5
 	var slide := Vector2(0, 50.0 if in_run else -60.0)
 	panel.position = rest + slide
-	var tween := create_tween()
+	var tween := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_STOP)
 	tween.tween_interval(delay)
 	tween.tween_property(panel, "modulate:a", 1.0, 0.2)
 	tween.parallel().tween_property(panel, "position", rest, 0.4) \
@@ -99,7 +111,7 @@ func break_lock() -> void:
 	lock.shatter()
 	await lock.shattered
 	Audio.play("level_up", 0.0, 0.0)
-	var tween := create_tween()
+	var tween := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_STOP)
 	tween.tween_property(portrait, "modulate", Color(2.2, 2.0, 1.4), 0.12)  # Flash
 	tween.tween_property(portrait, "modulate", Color.WHITE, 0.4)
 	tween.parallel().tween_property(portrait, "scale", Vector2.ONE * 1.2, 0.15)
