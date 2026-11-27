@@ -18,7 +18,8 @@ enum State { WAITING, OFFERING, WATCHING, REWARD }
 
 const CARD_SIZE := Vector2(340, 96)
 const TEXT_X: float = 86.0
-const HOME := Vector2(14, 156)
+const HOME := Vector2(14, 156)  # Default spot; Main moves it under the HUD (set_home)
+var home: Vector2 = HOME
 const GOLD := Color(1.0, 0.82, 0.32)
 const INK := Color(0.09, 0.11, 0.2, 0.94)
 
@@ -44,16 +45,27 @@ var clock: float = 0.0
 
 func _ready() -> void:
 	visible = false
-	position = HOME
+	position = home
 	size = CARD_SIZE
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	build()
 	# A sibling, not a child, so the list stays up while the card is hidden.
 	badges = VBoxContainer.new()
-	badges.position = HOME + Vector2(4, CARD_SIZE.y + 8)
+	badges.position = home + Vector2(4, CARD_SIZE.y + 8)
 	badges.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	badges.add_theme_constant_override("separation", 4)
 	add_sibling.call_deferred(badges)
+
+func set_home(spot: Vector2) -> void:
+	# Main keeps the card (and the boost badges under it) below the Level
+	# ribbon, effect icons and, on phones, the timer.
+	if spot == home:
+		return
+	var shift: Vector2 = spot - home
+	home = spot
+	position += shift
+	if badges != null:
+		badges.position = home + Vector2(4, CARD_SIZE.y + 8)
 
 # --- Look ---------------------------------------------------------------------
 
@@ -166,13 +178,13 @@ func show_card(eyebrow_text: String, title_text: String, detail_text: String, cl
 	bar.visible = state == State.OFFERING
 	if not visible:
 		visible = true
-		position = HOME + Vector2(-CARD_SIZE.x - 30, 0)  # Slides in from the left
-		create_tween().tween_property(self, "position", HOME, 0.35) \
+		position = home + Vector2(-CARD_SIZE.x - 30, 0)  # Slides in from the left
+		create_tween().tween_property(self, "position", home, 0.35) \
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func hide_card() -> void:
 	var t := create_tween()
-	t.tween_property(self, "position", HOME + Vector2(-CARD_SIZE.x - 30, 0), 0.25) \
+	t.tween_property(self, "position", home + Vector2(-CARD_SIZE.x - 30, 0), 0.25) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	t.tween_callback(func(): visible = false)
 

@@ -37,6 +37,8 @@ var frames_cache: Dictionary = {}           # Enemy type name -> SpriteFrames
 var kills: int = 0                          # Enemies killed this run (HUD, top right)
 var revives_left: int = BALANCE.revives_per_run
 var revive_offer: CanvasLayer
+var effect_icons: Control
+var ad_card: Control
 var map_stage: int = 0                      # Endless: how many maps it has moved on
 var morph_wait: float = 0.0                 # Endless: seconds until the next World.morph
 # The map's final boss: arrives with BALANCE.boss_arrives_seconds_left to go;
@@ -63,8 +65,10 @@ func _ready() -> void:
 	revive_offer.declined.connect(finish_run)
 	revive_offer.chance_used.connect(_on_second_chance_used)
 	add_child(revive_offer)
-	$HUD.add_child(BOOST_OFFER.new())
-	$HUD.add_child(EFFECT_ICONS.new())  # Icons for this run's consumables, beside the Level ribbon
+	ad_card = BOOST_OFFER.new()
+	$HUD.add_child(ad_card)
+	effect_icons = EFFECT_ICONS.new()
+	$HUD.add_child(effect_icons)  # Icons for this run's consumables, beside the Level ribbon
 	boss_hud = BOSS_HUD.new()
 	$HUD.add_child(boss_hud)
 	WindowControls.layout_changed.connect(fit_hud)
@@ -111,6 +115,7 @@ func _physics_process(_delta: float) -> void:
 			ENEMY_SCRIPT.far_distance = (get_viewport_rect().size / camera.zoom).length() * 0.5 + 250.0
 
 func _process(delta: float) -> void:
+	layout_hud()
 	if run_over:
 		return
 	elapsed += delta
@@ -566,10 +571,40 @@ func spawn_elite() -> bool:
 	return true
 
 func fit_hud() -> void:
-	# Too narrow for the clock beside the health bar: it drops to the next row.
+	layout_hud()
+
+func layout_hud() -> void:
+	# Top-left column, top to bottom: the Level ribbon with this run's effect
+	# icons beside it (wrapping onto more rows rather than running past the
+	# health bar), then on phones the timer, then the ad offer card and boost
+	# badges. Runs every frame: cheap, and follows the Level ribbon widening
+	# at level 10 and icons coming and going.
+	var level: Control = $HUD/LevelLabel
+	var hp: Control = $HUD/HPBar
+	var below: float = level.position.y + level.size.y
+	if effect_icons:
+		effect_icons.max_right = hp.position.x + hp.size.x + 10.0
+		effect_icons.place_icons()
+		below = maxf(below, effect_icons.bottom())
 	var clock: Label = $HUD/TimerLabel
-	clock.offset_top = 92.0 if WindowControls.is_narrow() else 26.0
-	clock.offset_bottom = clock.offset_top + 60.0
+	if WindowControls.is_narrow():
+		# No room beside the health bar: the timer goes under the Level row.
+		clock.anchor_left = 0.0
+		clock.anchor_right = 0.0
+		clock.offset_left = level.position.x
+		clock.offset_right = level.position.x + maxf(180.0, clock.get_minimum_size().x)
+		clock.offset_top = below + 4.0
+		clock.offset_bottom = clock.offset_top + 60.0
+		below = clock.offset_top + maxf(clock.size.y, 60.0)
+	else:
+		clock.anchor_left = 0.5
+		clock.anchor_right = 0.5
+		clock.offset_left = -90.0
+		clock.offset_right = 90.0
+		clock.offset_top = 26.0
+		clock.offset_bottom = 86.0
+	if ad_card:
+		ad_card.set_home(Vector2(level.position.x, below + 8.0))
 
 func show_map_banner(text: String = "") -> void:
 	# The map's name fades out over the first few seconds of a run (and in
@@ -588,7 +623,11 @@ func show_map_banner(text: String = "") -> void:
 	banner.offset_right = 220.0
 	banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	# Below the clock and clear of the consumable icons beside the Level ribbon.
-	banner.offset_top = 170.0 if WindowControls.is_narrow() else 150.0
+	# On phones the left column (Level, timer, ad card) fills the top, so the
+	# banner goes below it instead of on top of it.
+	banner.offset_top = 150.0
+	if WindowControls.is_narrow() and ad_card:
+		banner.offset_top = ad_card.home.y + ad_card.CARD_SIZE.y + 12.0
 	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	$HUD.add_child(banner)
 	var tween := banner.create_tween()

@@ -24,6 +24,8 @@ var open_id: String = ""          # Whose label is showing ("" = none)
 var label_panel: PanelContainer = null
 var label_timer: float = 0.0
 var level: Control
+var max_right: float = 340.0  # Icons wrap to a new row past this x (Main sets it)
+var per_row: int = 3
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -61,8 +63,19 @@ func sync_icons() -> void:
 		b.scale = Vector2.ONE * 0.3
 		create_tween().tween_property(b, "scale", Vector2.ONE, 0.25) \
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	place_icons()
+
+func place_icons() -> void:
+	# As many per row as fit before max_right, then the next row below.
+	per_row = maxi(int((max_right - position.x + GAP) / (ICON_SIZE + GAP)), 1)
 	for i in shown.size():
-		buttons[shown[i]].position = Vector2(i * (ICON_SIZE + GAP), 0)
+		buttons[shown[i]].position = Vector2((i % per_row) * (ICON_SIZE + GAP),
+			(i / per_row) * (ICON_SIZE + GAP))
+
+func bottom() -> float:
+	# Lowest edge of the icons (or the top of the row when there are none).
+	var rows: int = ceili(float(shown.size()) / per_row)
+	return position.y + rows * (ICON_SIZE + GAP) - (GAP if rows > 0 else 0.0)
 
 func make_icon(id: String) -> Button:
 	var item: Dictionary = ShopCatalog.consumable(id)
