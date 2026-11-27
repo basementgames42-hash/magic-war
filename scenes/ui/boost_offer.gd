@@ -7,10 +7,14 @@ extends Control
 # Only things sold for coins in the Shop (never gem items). Timing is in
 # res://config/balance.tres (boost_*). Its countdowns stop whenever the game
 # is paused, like everything in a run.
+#
+# Earned x2 boosts run on their own timers, listed under the card, so the card
+# goes away after the reward and the next offer still comes on schedule. Boosts
+# of different kinds stack; one already running is not offered again.
 
 const BALANCE: Balance = preload("res://config/balance.tres")
 
-enum State { WAITING, OFFERING, WATCHING, ACTIVE, REWARD }
+enum State { WAITING, OFFERING, WATCHING, REWARD }
 
 const CARD_SIZE := Vector2(340, 96)
 const TEXT_X: float = 86.0
@@ -25,8 +29,10 @@ var offer: Dictionary = {}
 var last_id: String = ""
 var gem_offers: int = 0
 var ads_watched: int = 0
+var boosts: Dictionary = {}     # Running x2 boosts: offer id -> seconds left
 
 var card: Button
+var badges: VBoxContainer       # One line per running boost, under the card
 var glow: Control
 var icon: TextureRect
 var eyebrow: Label
@@ -42,6 +48,12 @@ func _ready() -> void:
 	size = CARD_SIZE
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	build()
+	# A sibling, not a child, so the list stays up while the card is hidden.
+	badges = VBoxContainer.new()
+	badges.position = HOME + Vector2(4, CARD_SIZE.y + 8)
+	badges.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badges.add_theme_constant_override("separation", 2)
+	add_sibling.call_deferred(badges)
 
 # --- Look ---------------------------------------------------------------------
 
@@ -117,8 +129,8 @@ func build() -> void:
 	bar.draw.connect(func():
 		var k: float = clampf(timer / span, 0.0, 1.0)
 		bar.draw_rect(Rect2(Vector2.ZERO, bar.size), Color(1, 1, 1, 0.15))
-		var tint: Color = GOLD if state != State.ACTIVE else Color(0.5, 0.9, 0.5)
-		if state == State.OFFERING and k < 0.3:
+		var tint: Color = GOLD
+		if k < 0.3:
 			tint = Color(1.0, 0.45, 0.35)
 		bar.draw_rect(Rect2(Vector2.ZERO, Vector2(bar.size.x * k, bar.size.y)), tint))
 	card.add_child(bar)
@@ -151,7 +163,7 @@ func show_card(eyebrow_text: String, title_text: String, detail_text: String, cl
 	icon.texture = ShopUI.icon(offer["icon"], 52)
 	card.disabled = not clickable
 	cta.visible = clickable
-	bar.visible = state == State.OFFERING or state == State.ACTIVE
+	bar.visible = state == State.OFFERING
 	if not visible:
 		visible = true
 		position = HOME + Vector2(-CARD_SIZE.x - 30, 0)  # Slides in from the left
@@ -186,6 +198,8 @@ func eligible(o: Dictionary) -> bool:
 			return not o["id"] in GameData.run_effects
 		"gems":
 			return gem_offers < ShopCatalog.GEM_OFFERS_PER_RUN
+		"boost":
+			return not boosts.has(o["id"])  # Already running: offer something else
 	return true
 
 func _process(delta: float) -> void:
@@ -199,16 +213,11 @@ func _process(delta: float) -> void:
 			if timer <= 0.0:
 				wait_for_next_offer()
 				hide_card()
-		State.ACTIVE:
-			detail.text = "%ds left" % ceili(maxf(timer, 0.0))  # Short: always fits
-			if timer <= 0.0:
-				GameData.active_boost = ""
-				wait_for_next_offer()
-				hide_card()
 		State.REWARD:
 			if timer <= 0.0:
 				wait_for_next_offer()
 				hide_card()
+	tick_boosts(delta)
 	if visible:
 		glow.queue_redraw()
 		bar.queue_redraw()
@@ -263,13 +272,10 @@ func give_reward() -> void:
 	var player: Node = get_tree().get_first_node_in_group("player")
 	match offer["kind"]:
 		"boost":
-			GameData.active_boost = offer["id"]
-			state = State.ACTIVE
-			timer = BALANCE.boost_seconds
-			span = timer
-			show_card("ACTIVE", offer_title(offer), "%ds left" % int(timer), false)
-			celebrate()
-			return
+			boosts[offer["id"]] = BALANCE.boost_seconds
+			if not offer["id"] in GameData.active_boosts:
+				GameData.active_boosts.append(offer["id"])
+			tick_boosts(0.0)
 		"stock":
 			GameData.add_stock(offer["id"])
 		"effect":
@@ -280,10 +286,42 @@ func give_reward() -> void:
 			GameData.add_gems(offer["gems"])
 	state = State.REWARD
 	timer = 2.5
-	var got: String = {"stock": "Ready for when you fall", "effect": "Working for the rest of this run",
+	var got: String = {"boost": "Active for %ds" % int(BALANCE.boost_seconds),
+		"stock": "Ready for when you fall", "effect": "Working for the rest of this run",
 		"gems": "Added to your gems"}[offer["kind"]]
 	show_card("REWARD!", offer_title(offer), got, false)
 	celebrate()
+
+func tick_boosts(delta: float) -> void:
+	# Counts the running boosts down, ends the ones that run out, and redraws
+	# the list under the card ("x2 Gold  85s").
+	for id in boosts.keys():
+		boosts[id] -= delta
+		if boosts[id] <= 0.0:
+			boosts.erase(id)
+			GameData.active_boosts.erase(id)
+	if badges == null or not badges.is_inside_tree():
+		return
+	while badges.get_child_count() < boosts.size():
+		var l := Label.new()
+		l.add_theme_font_size_override("font_size", 16)
+		l.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6))
+		l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+		l.add_theme_constant_override("outline_size", 5)
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		badges.add_child(l)
+	while badges.get_child_count() > boosts.size():
+		var extra: Node = badges.get_child(badges.get_child_count() - 1)
+		badges.remove_child(extra)
+		extra.queue_free()
+	var i: int = 0
+	for id in boosts:
+		var title_text: String = id
+		for o in ShopCatalog.AD_OFFERS:
+			if o["id"] == id:
+				title_text = o["title"]
+		badges.get_child(i).text = "%s  %ds" % [title_text, ceili(boosts[id])]
+		i += 1
 
 func celebrate() -> void:
 	Audio.play("level_up", -4.0, 0.0)

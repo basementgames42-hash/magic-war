@@ -29,7 +29,7 @@ var unlocked_characters: Array[String] = []
 # Unlocked but not yet celebrated on the hero select screen (saved), so the
 # lock-break plays there even if the game was closed in between.
 var new_unlocks: Array[String] = []
-var active_boost: String = ""   # Ad boost running now: "gold", "xp", "drops" or ""
+var active_boosts: Array[String] = []  # Ad boosts running now: any of "gold", "xp", "drops"
 var shop_from_run: bool = false # Upgrade shop opened from the game-over screen (Back = carry on)
 var shop_back_text: String = "Play Again"  # What the shop's Back says then ("Next Level" after a win)
 var map_to_celebrate: int = -1  # Map just unlocked, whose padlock breaks on map select (saved)
@@ -110,7 +110,7 @@ func check_endless_unlocks(level: int, seconds: float) -> Array[String]:
 func start_run() -> void:
 	run_coins = 0
 	pending_coins = 0.0
-	active_boost = ""
+	active_boosts.clear()
 	# Next-run consumables go to work now and are used up.
 	run_effects = armed.duplicate()
 	armed.clear()
@@ -120,7 +120,7 @@ func start_run() -> void:
 	run_coins_changed.emit(run_coins)
 
 func boost_factor(id: String) -> float:
-	return BALANCE.boost_multiplier if active_boost == id else 1.0
+	return BALANCE.boost_multiplier if id in active_boosts else 1.0
 
 # Everything that multiplies gold / EXP / damage outside the meta upgrades:
 # the ad boost, this run's consumables and premium upgrades.
