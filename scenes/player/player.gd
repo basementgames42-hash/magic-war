@@ -257,7 +257,8 @@ func fire_at(target: Node2D) -> void:
 	shot.direction = aim
 	# Keen Eye: some attacks are critical hits, for double (BALANCE) damage.
 	var crit: bool = randf() < crit_chance
-	shot.damage = roundi(weapon_damage * BALANCE.crit_multiplier) if crit else weapon_damage
+	var hit: float = weapon_damage * GameData.boost_damage_factor()  # Power Surge ad boost
+	shot.damage = roundi(hit * BALANCE.crit_multiplier) if crit else roundi(hit)
 	shot.crit = crit  # The shot shows CRITICAL! where it lands
 	get_parent().add_child(shot)
 

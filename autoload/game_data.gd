@@ -29,7 +29,7 @@ var unlocked_characters: Array[String] = []
 # Unlocked but not yet celebrated on the hero select screen (saved), so the
 # lock-break plays there even if the game was closed in between.
 var new_unlocks: Array[String] = []
-var active_boosts: Array[String] = []  # Ad boosts running now: any of "gold", "xp", "drops"
+var active_boosts: Array[String] = []  # Ad boosts running now: any of "gold", "xp", "drops", "damage"
 var shop_from_run: bool = false # Upgrade shop opened from the game-over screen (Back = carry on)
 var shop_back_text: String = "Play Again"  # What the shop's Back says then ("Next Level" after a win)
 var map_to_celebrate: int = -1  # Map just unlocked, whose padlock breaks on map select (saved)
@@ -140,6 +140,11 @@ func xp_factor() -> float:
 		f *= ShopCatalog.INSIGHT_XP
 	return f
 
+func boost_damage_factor() -> float:
+	# Power Surge (timed ad boost), applied on every hit while it runs, on top
+	# of the Battle Elixir already in the weapon's damage.
+	return ShopCatalog.AD_DAMAGE_BOOST if "damage" in active_boosts else 1.0
+
 func damage_factor() -> float:
 	return ShopCatalog.ELIXIR_DAMAGE if "elixir" in run_effects else 1.0
 
@@ -164,7 +169,7 @@ func is_armed(id: String) -> bool:
 
 func can_buy_consumable(id: String) -> bool:
 	var item: Dictionary = ShopCatalog.consumable(id)
-	if item.is_empty() or coins < item["cost"]:
+	if item.is_empty() or gems < item["cost"]:  # Consumables cost gems
 		return false
 	if item["kind"] == "stock":
 		return stock_count(id) < item["max"]
@@ -174,12 +179,13 @@ func buy_consumable(id: String) -> bool:
 	if not can_buy_consumable(id):
 		return false
 	var item: Dictionary = ShopCatalog.consumable(id)
-	coins -= item["cost"]
+	gems -= item["cost"]
 	if item["kind"] == "stock":
 		stock[id] = stock_count(id) + 1
 	else:
 		armed.append(id)
 	save_game()
+	gems_changed.emit(gems)
 	return true
 
 func buy_premium(id: String) -> bool:

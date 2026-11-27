@@ -14,7 +14,7 @@ var tab: String = "items"
 var panel: PanelContainer
 var hint_label: Label
 const HINTS: Dictionary = {
-	"items": "Spend coins. Hold one of each, kept until used. Boosts work for your next run.",
+	"items": "Spend gems. Hold one of each, kept until used. Boosts work for your next run.",
 	"premium": "Spend gems. Bought once, kept forever. Earn gems from Daily Quests.",
 	"gems": "Trade coins for gems. Packs are optional: everything can be earned by playing.",
 }
@@ -133,11 +133,11 @@ func build_items() -> void:
 		var held: int = GameData.stock_count(id) if item["kind"] == "stock" else int(GameData.is_armed(id))
 		var limit: int = item.get("max", 1)
 		tag = "%d / %d" % [held, limit]
-		b = done_button("Owned") if held >= limit else price_button(item["cost"], false)
+		b = done_button("Owned") if held >= limit else price_button(item["cost"], true)
 		if not b.disabled:
 			b.pressed.connect(func():
 				if GameData.buy_consumable(id):
-					Audio.play("coin", 0.0, 0.0)
+					Audio.play("level_up", 0.0, 0.0)
 					refresh())
 		list.add_child(ShopUI.card(ShopUI.icon(item["icon"]), item["name"], item["desc"], b, tag))
 
