@@ -580,11 +580,15 @@ func show_map_banner(text: String = "") -> void:
 	banner.text = text
 	banner.theme_type_variation = &"GoldRibbon"
 	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# Centred however long the name is: it grows out evenly both ways from the
+	# middle (a fixed-width box let long names spill off to the right only).
 	banner.anchor_left = 0.5
 	banner.anchor_right = 0.5
 	banner.offset_left = -220.0
 	banner.offset_right = 220.0
-	banner.offset_top = 170.0 if WindowControls.is_narrow() else 130.0
+	banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	# Below the clock and clear of the consumable icons beside the Level ribbon.
+	banner.offset_top = 170.0 if WindowControls.is_narrow() else 150.0
 	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	$HUD.add_child(banner)
 	var tween := banner.create_tween()
