@@ -31,13 +31,13 @@ const TOME_XP: float = 1.5
 # Premium upgrades: bought once with gems, kept forever. Small on purpose,
 # so nothing in the game needs them.
 const PREMIUM: Array[Dictionary] = [
-	{"id": "phoenix", "icon": "feather_phoenix", "name": "Phoenix Feather", "cost": 5000,
+	{"id": "phoenix", "icon": "feather_phoenix", "name": "Phoenix Feather", "cost": 10000,
 		"desc": "A free Second Chance every run."},
-	{"id": "treasury", "icon": "crown_gold", "name": "Royal Treasury", "cost": 500,
+	{"id": "treasury", "icon": "crown_gold", "name": "Royal Treasury", "cost": 5000,
 		"desc": "+20% gold from every coin."},
-	{"id": "insight", "icon": "crystal_ball", "name": "Sage's Insight", "cost": 500,
+	{"id": "insight", "icon": "crystal_ball", "name": "Sage's Insight", "cost": 5000,
 		"desc": "+15% EXP in every run."},
-	{"id": "titan", "icon": "heart", "name": "Heart of the Titan", "cost": 300,
+	{"id": "titan", "icon": "heart", "name": "Heart of the Titan", "cost": 5000,
 		"desc": "+25 max HP in every run."},
 ]
 # Real money, bought once through the Store: every hero, every map and every
