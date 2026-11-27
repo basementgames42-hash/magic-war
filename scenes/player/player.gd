@@ -105,7 +105,9 @@ func _ready() -> void:
 # ranged = a shot or lobbed bomb: reduced by BALANCE.ranged_damage_multiplier
 # and kept out of the swarm streak (that's for being mobbed up close).
 # flat = costs exactly `amount` HP: no multipliers, no swarm streak (goblins).
-func take_damage(amount: int, ranged: bool = false, flat: bool = false) -> void:
+func take_damage(amount: int, ranged: bool = false, flat: bool = false, cap: int = 0) -> void:
+	# cap > 0: the most this one hit may take (regular maps cap normal, elite
+	# and boss hits; see Balance map_*_hit_cap).
 	if health <= 0:
 		return  # Already dead; several enemies can hit on the same frame
 	if super_timer > 0.0:
@@ -139,6 +141,9 @@ func take_damage(amount: int, ranged: bool = false, flat: bool = false) -> void:
 		# yet: its fraction waits for the next hit (so half damage really is half).
 		dealt = int(pending_damage) if ranged else maxi(int(pending_damage), 1)
 		pending_damage = maxf(pending_damage - dealt, 0.0)
+		if cap > 0 and dealt > cap:
+			dealt = cap
+			pending_damage = 0.0  # The excess is dropped, not saved for later
 	if dealt <= 0:
 		return
 

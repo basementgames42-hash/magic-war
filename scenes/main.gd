@@ -82,6 +82,8 @@ func _ready() -> void:
 	player.health_changed.connect(_on_health_changed)
 	player.died.connect(_on_player_died)
 
+	if not endless:
+		player.damage_taken_multiplier = BALANCE.map_damage_taken_multiplier
 	update_damage_bonus()
 	_on_xp_changed(player.xp, player.xp_to_next)
 	_on_health_changed(player.max_health, player.max_health)
@@ -252,8 +254,11 @@ func update_damage_bonus() -> void:
 	# Every hit the player takes gets stronger with each new enemy type, on
 	# harder maps, and as the player levels up — including hits from enemies
 	# already on the field.
-	player.wave_damage_bonus = wave_strength() * BALANCE.wave_damage_bonus + map["damage"] \
-		+ levels_gained() * BALANCE.damage_per_player_level
+	# Regular maps use their own, gentler settings (capped in the Balance
+	# map_* settings); Endless keeps the steeper ones.
+	var per_wave: float = BALANCE.wave_damage_bonus if endless else BALANCE.map_wave_damage_bonus
+	var per_level: float = BALANCE.damage_per_player_level if endless else BALANCE.map_damage_per_player_level
+	player.wave_damage_bonus = wave_strength() * per_wave + map["damage"] + levels_gained() * per_level
 
 func _on_health_changed(current_hp: int, max_hp: int) -> void:
 	$HUD/HPBar.max_value = max_hp
@@ -392,6 +397,7 @@ func spawn_boss() -> void:
 		* (1.0 + levels_gained() * BALANCE.boss_health_per_player_level))
 	boss.move_speed = BALANCE.enemy_speed * final_type["speed"] * enemy_speed_scale()
 	boss.contact_damage = BALANCE.boss_damage
+	boss.hit_cap = BALANCE.map_boss_hit_cap  # Bosses are regular maps only
 	boss.coin_drop = BALANCE.boss_coins
 	boss.xp_drop = BALANCE.boss_xp
 	# Same big-sheet correction as elites, so a minotaur boss isn't enormous.
@@ -508,6 +514,8 @@ func make_enemy() -> CharacterBody2D:
 	enemy.flat_hit = enemy_type.get("flat_damage", false)
 	enemy.variant_tint = enemy_type.get("tint", Color.WHITE)
 	enemy.killed.connect(_on_enemy_killed)
+	if not endless:
+		enemy.hit_cap = BALANCE.map_hit_cap  # Elites and the boss raise this below
 	return enemy  # Callers place it once its size is final (place_enemy)
 
 func place_enemy(enemy: CharacterBody2D) -> bool:
@@ -551,7 +559,9 @@ func spawn_elite() -> bool:
 	# Base elite stats come from res://config/balance.tres.
 	elite.max_health = BALANCE.elite_health + int(elapsed / 60.0) * BALANCE.elite_health_per_minute
 	elite.move_speed = BALANCE.elite_speed * enemy_type["speed"] * enemy_speed_scale()  # Slower, scarier
-	elite.contact_damage = BALANCE.elite_damage
+	elite.contact_damage = BALANCE.elite_damage if endless else BALANCE.map_elite_damage
+	if not endless:
+		elite.hit_cap = BALANCE.map_elite_hit_cap
 	elite.xp_drop = 10              # Kill reward: a shower of orbs
 	elite.killed.connect(GameData.quest_add.bind("elite", 1))
 	# Physically huge. Sheets bigger than the usual 192px frame need less

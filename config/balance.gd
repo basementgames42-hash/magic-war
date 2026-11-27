@@ -185,6 +185,19 @@ extends Resource
 @export_range(0.25, 5.0, 0.05) var damage_taken_multiplier: float = 1.5
 ## Extra damage taken per new enemy type (wave). 0.25 = +25% per wave.
 @export_range(0.0, 1.0, 0.05) var wave_damage_bonus: float = 0.25
+## Regular maps (not Endless) use these instead of the three settings above,
+## so a map run tops out at about 2 per normal hit, 7 per elite hit and 8 per
+## boss hit on the last map. Endless keeps the ones above.
+@export_range(0.25, 5.0, 0.05) var map_damage_taken_multiplier: float = 1.0
+@export_range(0.0, 1.0, 0.01) var map_wave_damage_bonus: float = 0.1
+@export_range(0.0, 0.2, 0.005) var map_damage_per_player_level: float = 0.01
+## Base damage of an elite's hit on regular maps.
+@export_range(1, 20) var map_elite_damage: int = 4
+## Regular maps: the most one hit can ever take, after every multiplier and
+## the swarm streak. Flat-damage enemies already do less than these.
+@export_range(1, 50) var map_hit_cap: int = 3
+@export_range(1, 50) var map_elite_hit_cap: int = 7
+@export_range(1, 50) var map_boss_hit_cap: int = 8
 ## Ranged hits (thrown bones, harpoons, hex bolts, lobbed bombs) do this
 ## share of a melee hit (0.5 = half), and never build the swarm streak below.
 @export_range(0.1, 1.0, 0.05) var ranged_damage_multiplier: float = 0.5
