@@ -8,7 +8,7 @@ extends CanvasLayer
 # Past BALANCE.epic_min_level, with 2+ additional weapons, a level-up may
 # swap one choice for a purple Epic Combo of two of them (epic_combo.gd),
 # up to BALANCE.max_epics per run.
-# Endless only: from BALANCE.god_min_level, once all three additional weapons
+# Endless only: from BALANCE.god_min_level, once three additional weapons
 # are taken, one level-up offers three gold God-Tier Combos instead
 # (god_combo.gd), one led by each weapon. One per run.
 
@@ -145,15 +145,18 @@ func maybe_offer_epic() -> void:
 		"desc": "%s  (%s + %s)" % [EPIC_COMBO.COMBOS[id][1], WEAPON_NAMES[parts[0]], WEAPON_NAMES[parts[1]]],
 	}
 
+const GOD_WEAPONS: int = 3  # A God-Tier is one lead weapon plus two infused ones
+
 func god_ready() -> bool:
-	# Endless, past the level, all three weapons in hand, none taken yet.
+	# Endless, past the level, three extra weapons in hand, none taken yet.
+	# (A run can hold four; God-Tier doesn't wait for the fourth.)
 	return GameData.endless and not god_taken and player.level >= BALANCE.god_min_level \
-		and acquired.size() >= BALANCE.max_extra_weapons
+		and acquired.size() >= GOD_WEAPONS
 
 func god_options() -> Array:
 	# Three God-Tiers from the same three weapons: each one led by a
 	# different weapon, with the other two infused into it.
-	var trio: Array[String] = acquired.slice(0, BALANCE.max_extra_weapons)
+	var trio: Array[String] = acquired.slice(0, GOD_WEAPONS)  # The first three taken
 	var out: Array = []
 	for lead in trio:
 		var others: Array = trio.filter(func(w): return w != lead)

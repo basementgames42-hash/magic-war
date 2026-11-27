@@ -52,7 +52,7 @@ func _ready() -> void:
 	badges = VBoxContainer.new()
 	badges.position = HOME + Vector2(4, CARD_SIZE.y + 8)
 	badges.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	badges.add_theme_constant_override("separation", 2)
+	badges.add_theme_constant_override("separation", 4)
 	add_sibling.call_deferred(badges)
 
 # --- Look ---------------------------------------------------------------------
@@ -293,8 +293,8 @@ func give_reward() -> void:
 	celebrate()
 
 func tick_boosts(delta: float) -> void:
-	# Counts the running boosts down, ends the ones that run out, and redraws
-	# the list under the card ("x2 Gold  85s").
+	# Counts the running boosts down, ends the ones that run out, and updates
+	# their badges under the card.
 	for id in boosts.keys():
 		boosts[id] -= delta
 		if boosts[id] <= 0.0:
@@ -302,26 +302,82 @@ func tick_boosts(delta: float) -> void:
 			GameData.active_boosts.erase(id)
 	if badges == null or not badges.is_inside_tree():
 		return
-	while badges.get_child_count() < boosts.size():
-		var l := Label.new()
-		l.add_theme_font_size_override("font_size", 16)
-		l.add_theme_color_override("font_color", Color(0.6, 1.0, 0.6))
-		l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
-		l.add_theme_constant_override("outline_size", 5)
-		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		badges.add_child(l)
-	while badges.get_child_count() > boosts.size():
-		var extra: Node = badges.get_child(badges.get_child_count() - 1)
-		badges.remove_child(extra)
-		extra.queue_free()
-	var i: int = 0
+	# One tidy badge per boost (icon, name, seconds left, a bar running down),
+	# built once and then only its numbers change.
+	for id in badge_nodes.keys():
+		if not boosts.has(id):
+			badge_nodes[id]["panel"].queue_free()
+			badge_nodes.erase(id)
 	for id in boosts:
-		var title_text: String = id
-		for o in ShopCatalog.AD_OFFERS:
-			if o["id"] == id:
-				title_text = o["title"]
-		badges.get_child(i).text = "%s  %ds" % [title_text, ceili(boosts[id])]
-		i += 1
+		if not badge_nodes.has(id):
+			badge_nodes[id] = make_badge(id)
+		var parts: Dictionary = badge_nodes[id]
+		parts["time"].text = "%ds" % ceili(boosts[id])
+		parts["fill"] = clampf(boosts[id] / BALANCE.boost_seconds, 0.0, 1.0)
+		parts["bar"].set_meta("fill", parts["fill"])
+		parts["bar"].queue_redraw()
+
+const BADGE_GREEN := Color(0.5, 0.92, 0.5)
+var badge_nodes: Dictionary = {}  # Boost id -> {panel, time, bar, fill}
+
+func make_badge(id: String) -> Dictionary:
+	var info: Dictionary = {}
+	for o in ShopCatalog.AD_OFFERS:
+		if o["id"] == id:
+			info = o
+	var panel := PanelContainer.new()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.custom_minimum_size = Vector2(196, 0)
+	var s := StyleBoxFlat.new()
+	s.bg_color = INK
+	s.border_color = BADGE_GREEN
+	s.set_border_width_all(2)
+	s.set_corner_radius_all(10)
+	s.content_margin_left = 8
+	s.content_margin_right = 10
+	s.content_margin_top = 4
+	s.content_margin_bottom = 5
+	panel.add_theme_stylebox_override("panel", s)
+	var column := VBoxContainer.new()
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_theme_constant_override("separation", 3)
+	panel.add_child(column)
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 6)
+	column.add_child(row)
+	var pic := TextureRect.new()
+	pic.texture = ShopUI.icon(info.get("icon", "coin_gold"), 22)
+	pic.custom_minimum_size = Vector2(22, 22)
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(pic)
+	var name_label := Label.new()
+	name_label.text = info.get("title", id)
+	name_label.add_theme_font_size_override("font_size", 15)
+	name_label.add_theme_color_override("font_color", Color.WHITE)
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(name_label)
+	var time_label := Label.new()
+	time_label.add_theme_font_size_override("font_size", 15)
+	time_label.add_theme_color_override("font_color", BADGE_GREEN)
+	time_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(time_label)
+	var bar := Control.new()  # Time left, shrinking along the bottom
+	bar.custom_minimum_size = Vector2(0, 3)
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.draw.connect(func():
+		var k: float = bar.get_meta("fill", 1.0)
+		bar.draw_rect(Rect2(Vector2.ZERO, bar.size), Color(1, 1, 1, 0.15))
+		bar.draw_rect(Rect2(Vector2.ZERO, Vector2(bar.size.x * k, bar.size.y)), BADGE_GREEN))
+	column.add_child(bar)
+	badges.add_child(panel)
+	# Pops in.
+	panel.modulate.a = 0.0
+	panel.create_tween().tween_property(panel, "modulate:a", 1.0, 0.2)
+	return {"panel": panel, "time": time_label, "bar": bar, "fill": 1.0}
 
 func celebrate() -> void:
 	Audio.play("level_up", -4.0, 0.0)
