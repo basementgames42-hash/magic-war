@@ -192,16 +192,6 @@ func buy_premium(id: String) -> bool:
 	gems_changed.emit(gems)
 	return true
 
-func buy_coin_chest() -> bool:
-	var chest: Dictionary = ShopCatalog.COIN_CHEST
-	if gems < chest["gems"]:
-		return false
-	gems -= chest["gems"]
-	coins += chest["coins"]
-	save_game()
-	gems_changed.emit(gems)
-	return true
-
 func buy_gem_with_coins() -> bool:
 	var ex: Dictionary = ShopCatalog.GEM_EXCHANGE
 	if coins < ex["coins"]:

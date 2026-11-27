@@ -6,7 +6,7 @@ class_name ShopCatalog
 #   - Coins: earned in every run (the Upgrades shop uses them too).
 #   - Gems: the rarer one. Earned from Daily Quests (no purchase needed),
 #     or bought in packs through the Store (real money, optional).
-# Gems can always be turned into coins, never the other way round.
+# Coins can be traded for gems (the Gem Exchange); gems never turn back into coins.
 
 # Consumables, bought with coins. "kind":
 #   "stock"    - kept until used (Second Chance: used when you die)
@@ -31,7 +31,7 @@ const TOME_XP: float = 1.5
 # Premium upgrades: bought once with gems, kept forever. Small on purpose,
 # so nothing in the game needs them.
 const PREMIUM: Array[Dictionary] = [
-	{"id": "phoenix", "icon": "feather_phoenix", "name": "Phoenix Feather", "cost": 600,
+	{"id": "phoenix", "icon": "feather_phoenix", "name": "Phoenix Feather", "cost": 5000,
 		"desc": "A free Second Chance every run."},
 	{"id": "treasury", "icon": "crown_gold", "name": "Royal Treasury", "cost": 500,
 		"desc": "+20% gold from every coin."},
@@ -43,10 +43,6 @@ const PREMIUM: Array[Dictionary] = [
 const TREASURY_GOLD: float = 1.2
 const INSIGHT_XP: float = 1.15
 const TITAN_HP: int = 25
-
-# Gems -> coins.
-const COIN_CHEST: Dictionary = {"id": "coin_chest", "icon": "chest_treasure", "name": "Coin Chest", "gems": 50, "coins": 750,
-	"desc": "Trade 50 gems for 750 coins."}
 
 # Coins -> gems (the long way round, for players with a big pile of gold).
 const GEM_EXCHANGE: Dictionary = {"id": "gem_exchange", "icon": "gem_opal", "name": "Gem Exchange",

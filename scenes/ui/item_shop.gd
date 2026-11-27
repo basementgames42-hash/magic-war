@@ -2,7 +2,7 @@ extends Control
 # Shop: three tabs.
 #   Items   - consumables bought with coins (Second Chance, next-run boosts)
 #   Premium - one-time permanent upgrades bought with gems
-#   Gems    - the Coin Chest (gems -> coins), and gem packs for real money
+#   Gems    - the Gem Exchange (coins -> gems), and gem packs for real money
 #             (those only when the Store is available)
 # Built in code from ShopCatalog, so new items only need a catalog entry.
 
@@ -16,7 +16,7 @@ var hint_label: Label
 const HINTS: Dictionary = {
 	"items": "Spend coins. Hold one of each, kept until used. Boosts work for your next run.",
 	"premium": "Spend gems. Bought once, kept forever. Earn gems from Daily Quests.",
-	"gems": "Trade gems and coins. Packs are optional: everything can be earned by playing.",
+	"gems": "Trade coins for gems. Packs are optional: everything can be earned by playing.",
 }
 
 func _ready() -> void:
@@ -155,13 +155,6 @@ func build_premium() -> void:
 			"Owned" if owned else ""))
 
 func build_gems() -> void:
-	var chest: Dictionary = ShopCatalog.COIN_CHEST
-	var cb: Button = price_button(chest["gems"], true)
-	cb.pressed.connect(func():
-		if GameData.buy_coin_chest():
-			Audio.play("coin", 0.0, 0.0)
-			refresh())
-	list.add_child(ShopUI.card(ShopUI.icon(chest["icon"]), chest["name"], chest["desc"], cb))
 	var ex: Dictionary = ShopCatalog.GEM_EXCHANGE
 	var eb: Button = price_button(ex["coins"], false)
 	eb.pressed.connect(func():
@@ -170,7 +163,7 @@ func build_gems() -> void:
 			refresh())
 	list.add_child(ShopUI.card(ShopUI.icon(ex["icon"]), ex["name"], ex["desc"], eb))
 	if not Store.is_available():
-		hint_label.text = "Trade gems and coins. Earn gems from Daily Quests."
+		hint_label.text = "Trade coins for gems. Earn gems from Daily Quests."
 		return
 	# The packs as three side-by-side tiles.
 	var tiles := HBoxContainer.new()
