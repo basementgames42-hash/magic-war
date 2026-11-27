@@ -3,7 +3,9 @@ extends Node
 # only uses is_available() and buy(), so a real store plugs in here alone
 # (Google Play Billing / App Store on phones, or a web checkout):
 #   1. Add the store plugin and register the product ids from
-#      ShopCatalog.GEM_PACKS (gems_100, gems_550, gems_1200).
+#      ShopCatalog.GEM_PACKS (gems_100, gems_550, gems_1200), plus
+#      ShopCatalog.UNLOCK_ALL (unlock_all: a one-time, non-consumable buy
+#      that "restore purchases" should give back on a new device).
 #   2. Make is_available() true once the store is connected.
 #   3. Make buy() open the store's checkout, and call finish(true) only when
 #      the store confirms the payment (finish(false) if cancelled or failed).
@@ -37,7 +39,8 @@ func buy(product_id: String, finished: Callable) -> void:
 	# are already added and saved.
 	if busy or not enabled:
 		return
-	product = ShopCatalog.gem_pack(product_id)
+	product = ShopCatalog.UNLOCK_ALL if product_id == ShopCatalog.UNLOCK_ALL["id"] \
+		else ShopCatalog.gem_pack(product_id)
 	if product.is_empty():
 		return
 	busy = true
@@ -50,7 +53,10 @@ func finish(paid: bool) -> void:
 		test_checkout.queue_free()
 		test_checkout = null
 	if paid:
-		GameData.add_gems(product["gems"])
+		if product.has("gems"):
+			GameData.add_gems(product["gems"])
+		else:
+			GameData.unlock_everything()  # The only other product
 	on_finished.call(paid)
 
 func show_test_checkout() -> void:
@@ -76,8 +82,9 @@ func show_test_checkout() -> void:
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(heading)
 	var body := Label.new()
-	body.text = "%s: %d gems for %s\nThis is a test. No money is charged." % [
-		product["name"], product["gems"], product["price"]]
+	var what: String = ("%d gems" % product["gems"]) if product.has("gems") else "everything unlocked"
+	body.text = "%s: %s for %s\nThis is a test. No money is charged." % [
+		product["name"], what, product["price"]]
 	body.theme_type_variation = &"DarkLabel"
 	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(body)

@@ -180,3 +180,19 @@ func build_gems() -> void:
 				refresh()))
 		tiles.add_child(ShopUI.tile(ShopUI.icon(pack["icon"]), pack["name"],
 			"%d gems" % pack["gems"], b, pack.get("tag", "")))
+	# Unlock Everything: the other real-money offer, under the gem packs.
+	var all: Dictionary = ShopCatalog.UNLOCK_ALL
+	var owned_all: bool = GameData.has_everything()
+	var ab: Button
+	if owned_all:
+		ab = done_button("Owned")
+	else:
+		ab = Button.new()
+		ab.text = all["price"]
+		ab.pressed.connect(func():
+			Store.buy(all["id"], func(paid: bool):
+				if paid:
+					Audio.play("level_up", 0.0, 0.0)
+				refresh()))
+	list.add_child(ShopUI.card(ShopUI.icon(all["icon"]), all["name"], all["desc"], ab,
+		"Owned" if owned_all else "Best value"))

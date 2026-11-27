@@ -303,6 +303,31 @@ func claim_quest_bonus() -> bool:
 	add_gems(ShopCatalog.ALL_DONE_GEMS)
 	return true
 
+func has_everything() -> bool:
+	# True once every hero, map and Premium upgrade is unlocked (however it
+	# happened), so the Unlock Everything offer shows as owned.
+	for entry in Characters.ROSTER:
+		if not is_character_unlocked(entry["id"]):
+			return false
+	for item in ShopCatalog.PREMIUM:
+		if not has_premium(item["id"]):
+			return false
+	return levels_unlocked >= Levels.MAPS.size()
+
+func unlock_everything() -> void:
+	# The Unlock Everything purchase. New heroes get their lock-break on the
+	# hero select screen, like heroes unlocked by playing.
+	for entry in Characters.ROSTER:
+		var id: String = entry["id"]
+		if not is_character_unlocked(id):
+			unlocked_characters.append(id)
+			new_unlocks.append(id)
+	levels_unlocked = Levels.MAPS.size()
+	for item in ShopCatalog.PREMIUM:
+		if not has_premium(item["id"]):
+			premium.append(item["id"])
+	save_game()
+
 func is_level_unlocked(index: int) -> bool:
 	return index < levels_unlocked
 

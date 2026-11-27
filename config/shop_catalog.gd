@@ -40,6 +40,11 @@ const PREMIUM: Array[Dictionary] = [
 	{"id": "titan", "icon": "heart", "name": "Heart of the Titan", "cost": 300,
 		"desc": "+25 max HP in every run."},
 ]
+# Real money, bought once through the Store: every hero, every map and every
+# Premium upgrade above. Product id "unlock_all" (register it in the store too).
+const UNLOCK_ALL: Dictionary = {"id": "unlock_all", "icon": "key_royal", "name": "Unlock Everything",
+	"price": "$19.99", "desc": "All heroes, all maps, all Premium upgrades."}
+
 const TREASURY_GOLD: float = 1.2
 const INSIGHT_XP: float = 1.15
 const TITAN_HP: int = 25
