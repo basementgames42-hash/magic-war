@@ -94,7 +94,7 @@ const MAPS: Array[Dictionary] = [
 			{"name": "Torch Goblin", "run": "Run", "attack": "Attack", "ai": "arson", "speed": 1.05, "health": 1.0, "flat_damage": true},
 			{"name": "Spear Goblin", "run": "Run", "attack": "Attack Fast", "ai": "skirmish", "speed": 1.1, "health": 1.0, "flat_damage": true},
 			{"name": "Gnoll", "run": "Walk", "attack": "Throw", "ai": "kite", "speed": 0.95, "health": 0.9},
-			{"name": "Panda", "run": "Run", "attack": "Attack", "ai": "slam", "speed": 0.8, "health": 1.8},
+			{"name": "Panda", "run": "Run", "attack": "Attack", "ai": "slam", "speed": 0.8, "health": 1.8, "flat_damage": true},
 			{"name": "Bear", "run": "Run", "attack": "Attack", "ai": "enrage", "speed": 0.6, "health": 2.5},
 		],
 	},
@@ -152,7 +152,7 @@ const MAPS: Array[Dictionary] = [
 			["archery", -1250, 1480], ["skull_spike1", 460, -1300], ["skull_spike2", 620, -1380],
 		],
 		"enemies": [
-			{"name": "Giant Bat", "run": "Move", "attack": "Attack", "ai": "swoop", "speed": 1.15, "health": 0.9},
+			{"name": "Giant Bat", "run": "Move", "attack": "Attack", "ai": "swoop", "speed": 0.85, "health": 0.9, "flat_damage": true},
 			{"name": "Bumblebee", "run": "Move", "attack": "Attack", "ai": "sting", "speed": 1.3, "health": 0.8},
 			{"name": "Imp", "run": "Move", "attack": "Attack_Loop", "ai": "blink", "speed": 0.9, "health": 1.1},
 			{"name": "Hex Shaman", "run": "Run", "attack": "Attack", "ai": "hex", "speed": 0.85, "health": 1.2},
@@ -216,8 +216,8 @@ const MAPS: Array[Dictionary] = [
 			["tower", -1450, 1250], ["dead_tree", -1200, 1450],
 		],
 		"enemies": [
-			{"name": "Giant Bat", "run": "Move", "attack": "Attack", "ai": "swoop", "speed": 1.15, "health": 0.9,
-				"tint": Color(0.75, 0.6, 1.05)},
+			{"name": "Giant Bat", "run": "Move", "attack": "Attack", "ai": "swoop", "speed": 0.85, "health": 0.9,
+				"tint": Color(0.75, 0.6, 1.05), "flat_damage": true},
 			{"name": "Thief", "run": "Run", "attack": "Attack", "ai": "flank", "speed": 1.2, "health": 1.0,
 				"tint": Color(0.75, 0.6, 1.05)},
 			{"name": "Pig", "folder": "Extra/Pig", "file": "Pig", "run": "Run", "attack": "Run",
@@ -225,7 +225,7 @@ const MAPS: Array[Dictionary] = [
 			{"name": "Imp", "run": "Move", "attack": "Attack_Loop", "ai": "blink", "speed": 0.9, "health": 1.1,
 				"tint": Color(0.8, 0.6, 1.1)},
 			{"name": "Panda", "run": "Run", "attack": "Attack", "ai": "slam", "speed": 0.8, "health": 1.9,
-				"tint": Color(0.7, 0.55, 1.0)},
+				"tint": Color(0.7, 0.55, 1.0), "flat_damage": true},
 		],
 	},
 	{

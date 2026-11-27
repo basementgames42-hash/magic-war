@@ -93,17 +93,26 @@ static func burst(parent: Node, pos: Vector2, color: Color, amount: int = 12,
 
 # Plays a one-row sprite sheet of square frames once at a world position,
 # then deletes itself.
+# Built SpriteFrames per sheet and speed, so effects that fire many times a
+# second (torch fires, explosions) don't rebuild them on every play.
+static var sheet_frames: Dictionary = {}
+
 static func play_sheet(parent: Node, pos: Vector2, sheet: Texture2D,
 		fps: float = 16.0, size: float = 1.0) -> void:
-	var frames := SpriteFrames.new()
-	frames.set_animation_speed(&"default", fps)
-	frames.set_animation_loop(&"default", false)
-	var frame_size: int = sheet.get_height()
-	for i in sheet.get_width() / frame_size:
-		var atlas := AtlasTexture.new()
-		atlas.atlas = sheet
-		atlas.region = Rect2(i * frame_size, 0, frame_size, frame_size)
-		frames.add_frame(&"default", atlas)
+	fps = roundf(fps)  # Whole numbers only, so random speeds share a few cache entries
+	var key: String = "%d@%d" % [sheet.get_instance_id(), int(fps)]
+	var frames: SpriteFrames = sheet_frames.get(key)
+	if frames == null:
+		frames = SpriteFrames.new()
+		frames.set_animation_speed(&"default", fps)
+		frames.set_animation_loop(&"default", false)
+		var frame_size: int = sheet.get_height()
+		for i in sheet.get_width() / frame_size:
+			var atlas := AtlasTexture.new()
+			atlas.atlas = sheet
+			atlas.region = Rect2(i * frame_size, 0, frame_size, frame_size)
+			frames.add_frame(&"default", atlas)
+		sheet_frames[key] = frames
 	var sprite := AnimatedSprite2D.new()
 	sprite.sprite_frames = frames
 	sprite.scale = Vector2.ONE * size

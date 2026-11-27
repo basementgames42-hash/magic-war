@@ -109,7 +109,11 @@ static func tile(pic: Texture2D, title: String, amount_text: String, button: But
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(1, 1, 1, 0.35)
 	style.set_corner_radius_all(10)
+	# Kept compact so the Gems tab (exchange, packs, Unlock Everything) fits
+	# without scrolling on a 648px-tall screen.
 	style.set_content_margin_all(6)
+	style.content_margin_top = 4
+	style.content_margin_bottom = 4
 	panel.add_theme_stylebox_override("panel", style)
 	var col := VBoxContainer.new()
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -117,7 +121,7 @@ static func tile(pic: Texture2D, title: String, amount_text: String, button: But
 	panel.add_child(col)
 	var image := TextureRect.new()
 	image.texture = pic
-	image.custom_minimum_size = Vector2(34, 34)
+	image.custom_minimum_size = Vector2(30, 30)
 	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	col.add_child(image)
@@ -134,7 +138,7 @@ static func tile(pic: Texture2D, title: String, amount_text: String, button: But
 	col.add_child(tag_holder)
 	if tag != "":
 		tag_holder.add_child(status_tag(tag))
-	button.custom_minimum_size = Vector2(0, 44)
+	button.custom_minimum_size = Vector2(0, 40)
 	button.add_theme_font_size_override("font_size", 22)
 	button.focus_mode = Control.FOCUS_NONE
 	col.add_child(button)

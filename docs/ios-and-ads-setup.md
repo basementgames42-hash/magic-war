@@ -6,8 +6,9 @@ Where things stood on 2026-10-30, and what to do when you come back to this.
 
 - The revive and x2 boost offers are built and tested.
 - All ad calls go through one file, `autoload/ads.gd`.
-- Debug builds show a labelled TEST AD. Release builds have `enabled = false`,
-  so every offer stays hidden until real ads are connected.
+- Debug builds and the Web build show a labelled TEST AD. Phone release
+  builds have `enabled = false`, so every offer stays hidden there until real
+  ads are connected.
 - Offer timing is in `config/balance.tres`, under the Ads group.
 
 ## What you need first

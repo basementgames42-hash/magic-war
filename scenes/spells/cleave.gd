@@ -7,6 +7,8 @@ const ARC_HALF: float = 1.15  # Half the sweep, in radians (~130 degrees in all)
 var direction: Vector2 = Vector2.RIGHT
 var reach: float = 190.0
 var damage: int = 1
+var crit: bool = false  # A Keen Eye critical hit (set by the player)
+const CritPopup = preload("res://scenes/ui/crit_popup.gd")
 var duration: float = 0.22
 
 # 0 = swing starts, 1 = finished. A tween drives it; _draw reads it.
@@ -22,6 +24,9 @@ func _ready() -> void:
 		var offset: Vector2 = enemy.global_position - global_position
 		if offset.length() < reach and absf(direction.angle_to(offset)) < ARC_HALF:
 			enemy.take_damage(damage)
+			if crit:
+				CritPopup.spawn(enemy.global_position)
+				crit = false  # One popup per swing, however many it hits
 	Audio.play("orb_hit", -6.0, 0.15)
 	var tween := create_tween()
 	tween.tween_property(self, "progress", 1.0, duration)

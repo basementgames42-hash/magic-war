@@ -6,14 +6,13 @@ extends Node
 #   3. Make show_rewarded() play it, and call finish(true) only when the
 #      network says the player earned the reward (finish(false) otherwise).
 #
-# Until then, debug builds show a labelled test ad. Release builds have no ads:
-# is_available() is false, so the game hides every offer. The one exception:
-# the Web build shows the test ad when the page address ends in ?testads=1,
-# so the offers can be checked on the live site.
+# Until then, debug builds and every Web build show a labelled test ad (the
+# reward is granted when it finishes). Other release builds (phones) have no
+# ads: is_available() is false, so the game hides every offer.
 
 const TEST_AD_SECONDS: float = 5.0
 
-var enabled: bool = OS.is_debug_build() or web_test_ads_requested()
+var enabled: bool = OS.is_debug_build() or OS.has_feature("web")
 var showing: bool = false
 var was_paused: bool = false
 var on_finished: Callable
@@ -26,13 +25,7 @@ func _ready() -> void:
 	# Keeps running while the game is paused behind the ad.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	if enabled and not OS.is_debug_build():
-		print("Ads: test ads on (?testads=1)")
-
-static func web_test_ads_requested() -> bool:
-	if not OS.has_feature("web"):
-		return false
-	var query: Variant = JavaScriptBridge.eval("window.location.search", true)
-	return query is String and "testads=1" in query
+		print("Ads: test ads on (Web build)")
 
 func is_available() -> bool:
 	return enabled

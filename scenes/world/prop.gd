@@ -45,7 +45,9 @@ const KINDS: Dictionary = {
 	"bush3": ["Terrain/Decorations/Bushes/Bushe3.png", 8, 79, Vector2.ZERO],
 	"sheep": ["Terrain/Resources/Meat/Sheep/Sheep_Idle.png", 6, 84, Vector2.ZERO],
 	"sheep_grazing": ["Terrain/Resources/Meat/Sheep/Sheep_Grass.png", 12, 84, Vector2.ZERO],
-	"dead_tree": [EXTRA + "Dead Tree/Dead Tree.png", 1, 290, Vector2(130, 60)],
+	# The whole trunk is solid (not just a strip at its foot), so two trees side
+	# by side never leave a walkable gap between what looks like one big trunk.
+	"dead_tree": [EXTRA + "Dead Tree/Dead Tree.png", 1, 290, Vector2(170, 90)],
 	# 16 frames of 192px (smoke puffing from the chimney). Cutting it into 12
 	# made each frame straddle two huts, so the hut slid about as it animated.
 	"goblin_hut": [EXTRA + "Goblin Hut/Goblin Hut.png", 16, 241, Vector2(130, 60)],

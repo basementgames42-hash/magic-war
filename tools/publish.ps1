@@ -7,8 +7,9 @@
 #
 # Usage (from the project folder):
 #   powershell -ExecutionPolicy Bypass -File tools\publish.ps1 "What changed"
-# Finds Godot on either of our PCs automatically (see $candidates below);
-# set $env:GODOT to override.
+# Finds Godot on any of our PCs automatically (see $candidates below);
+# set $env:GODOT to override. Needs Godot's Web export templates installed
+# (Editor > Manage Export Templates) on the PC it runs on.
 
 param([string]$Message = "")
 
@@ -21,6 +22,10 @@ $candidates = @(
     "D:\Godot\Godot_v4.7-stable_win64_console.exe",                         # Desktop (Alon)
     "C:\Users\akore\OneDrive\Godot\Godot_v4.7-stable_win64_console.exe"     # Other PC (akore)
 )
+# Third PC: Godot lives in C:\Godot. Any version's console exe there counts,
+# newest first, so updating Godot doesn't break this script.
+$candidates += @(Get-ChildItem "C:\Godot\Godot_v*_win64_console.exe" -ErrorAction SilentlyContinue |
+    Sort-Object Name -Descending | ForEach-Object { $_.FullName })
 $godot = $env:GODOT
 if (-not $godot) { $godot = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1 }
 if (-not $godot -or -not (Test-Path $godot)) {
@@ -37,8 +42,23 @@ if ($LASTEXITCODE -ne 0 -or -not (Test-Path build\web\index.html)) {
 }
 
 Write-Host "== Patching service worker..."
-python tools/patch_service_worker.py build/web
-if ($LASTEXITCODE -ne 0) { throw "Service worker patch failed." }
+# Needs Python. Windows has a fake "python" that only opens the Microsoft
+# Store, so try each name and keep the first that really runs.
+$python = $null
+foreach ($name in @("py", "python", "python3")) {
+    try {
+        & $name --version *> $null
+        if ($LASTEXITCODE -eq 0) { $python = $name; break }
+    } catch {}
+}
+if ($python) {
+    & $python tools/patch_service_worker.py build/web
+    if ($LASTEXITCODE -ne 0) { throw "Service worker patch failed." }
+} else {
+    # The GitHub Pages deploy runs the same patch, so the live site is fine.
+    # Only the itch.io zip keeps Godot's original (cache-first) worker.
+    Write-Warning "Python not found: skipping the local service worker patch. GitHub Pages still gets it; the itch.io zip won't. Install Python to patch it here too."
+}
 
 Write-Host "== Zipping for itch.io..."
 Compress-Archive -Path build\web\* -DestinationPath build\magic-war-web.zip -Force

@@ -6,19 +6,20 @@ class_name ShopCatalog
 #   - Coins: earned in every run (the Upgrades shop uses them too).
 #   - Gems: the rarer one. Earned from Daily Quests (no purchase needed),
 #     or bought in packs through the Store (real money, optional).
-# Gems can always be turned into coins, never the other way round.
+# Coins can be traded for gems (the Gem Exchange); gems never turn back into coins.
 
 # Consumables, bought with coins. "kind":
 #   "stock"    - kept until used (Second Chance: used when you die)
-#   "next_run" - armed for your next run only, one at a time
+#   "next_run" - kept (saved) until your next run starts, which uses it up
+# The player can hold one of each at a time (the Shop shows 0 / 1 or 1 / 1).
 const CONSUMABLES: Array[Dictionary] = [
-	{"id": "second_chance", "icon": "potion_round_gold", "name": "Second Chance", "kind": "stock", "cost": 250, "max": 5,
+	{"id": "second_chance", "icon": "potion_round_gold", "name": "Second Chance", "kind": "stock", "cost": 3000, "max": 1,
 		"desc": "Revive where you fell. No ad needed."},
-	{"id": "elixir", "icon": "potion_flask_amber", "name": "Battle Elixir", "kind": "next_run", "cost": 120,
+	{"id": "elixir", "icon": "potion_flask_amber", "name": "Battle Elixir", "kind": "next_run", "cost": 3000,
 		"desc": "+25% damage for your next run."},
-	{"id": "charm", "icon": "clover", "name": "Lucky Charm", "kind": "next_run", "cost": 100,
+	{"id": "charm", "icon": "clover", "name": "Lucky Charm", "kind": "next_run", "cost": 3000,
 		"desc": "+50% gold for your next run."},
-	{"id": "tome", "icon": "book_blue", "name": "Wisdom Tome", "kind": "next_run", "cost": 100,
+	{"id": "tome", "icon": "book_blue", "name": "Wisdom Tome", "kind": "next_run", "cost": 3000,
 		"desc": "+50% EXP for your next run."},
 ]
 
@@ -30,22 +31,23 @@ const TOME_XP: float = 1.5
 # Premium upgrades: bought once with gems, kept forever. Small on purpose,
 # so nothing in the game needs them.
 const PREMIUM: Array[Dictionary] = [
-	{"id": "phoenix", "icon": "feather_phoenix", "name": "Phoenix Feather", "cost": 600,
+	{"id": "phoenix", "icon": "feather_phoenix", "name": "Phoenix Feather", "cost": 10000,
 		"desc": "A free Second Chance every run."},
-	{"id": "treasury", "icon": "crown_gold", "name": "Royal Treasury", "cost": 500,
+	{"id": "treasury", "icon": "crown_gold", "name": "Royal Treasury", "cost": 5000,
 		"desc": "+20% gold from every coin."},
-	{"id": "insight", "icon": "crystal_ball", "name": "Sage's Insight", "cost": 500,
+	{"id": "insight", "icon": "crystal_ball", "name": "Sage's Insight", "cost": 5000,
 		"desc": "+15% EXP in every run."},
-	{"id": "titan", "icon": "heart", "name": "Heart of the Titan", "cost": 300,
+	{"id": "titan", "icon": "heart", "name": "Heart of the Titan", "cost": 5000,
 		"desc": "+25 max HP in every run."},
 ]
+# Real money, bought once through the Store: every hero, every map and every
+# Premium upgrade above. Product id "unlock_all" (register it in the store too).
+const UNLOCK_ALL: Dictionary = {"id": "unlock_all", "icon": "key_royal", "name": "Unlock Everything",
+	"price": "$19.99", "desc": "All heroes, all maps, all Premium upgrades."}
+
 const TREASURY_GOLD: float = 1.2
 const INSIGHT_XP: float = 1.15
 const TITAN_HP: int = 25
-
-# Gems -> coins.
-const COIN_CHEST: Dictionary = {"id": "coin_chest", "icon": "chest_treasure", "name": "Coin Chest", "gems": 50, "coins": 750,
-	"desc": "Trade 50 gems for 750 coins."}
 
 # Coins -> gems (the long way round, for players with a big pile of gold).
 const GEM_EXCHANGE: Dictionary = {"id": "gem_exchange", "icon": "gem_opal", "name": "Gem Exchange",

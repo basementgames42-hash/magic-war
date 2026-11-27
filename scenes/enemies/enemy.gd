@@ -438,14 +438,16 @@ func brain_shell(to_player: Vector2) -> Vector2:
 	return to_player.normalized()
 
 # Giant Bat: circles overhead, then swoops straight through you and out.
+const SWOOP_SPEED: float = 2.0  # Swoop speed x its normal speed (was 2.8: too fast to react to)
 func brain_swoop(to_player: Vector2) -> Vector2:
 	if ai_state == 1:
-		speed_factor = 2.8
+		speed_factor = SWOOP_SPEED
 		if ai_timer <= 0.0:
 			enter_state(0, randf_range(1.6, 2.6))
 		return ai_dir
 	if ai_timer <= 0.0:
-		enter_state(1, (to_player.length() + 280.0) / (move_speed * 2.8))
+		# Long enough to fly the same distance as before, just slower.
+		enter_state(1, (to_player.length() + 280.0) / (move_speed * SWOOP_SPEED))
 		ai_dir = to_player.normalized()
 	var radial: float = clampf((to_player.length() - 300.0) / 150.0, -1.0, 1.0)
 	return (to_player.normalized() * radial + to_player.normalized().orthogonal()).normalized()
@@ -477,8 +479,13 @@ func brain_blink(to_player: Vector2) -> Vector2:
 	return to_player.normalized()
 
 func teleport_near_player(distance: float) -> void:
+	# Only to a spot its whole body fits; with none nearby it reappears where
+	# it vanished rather than inside a wall.
+	var spot: Variant = get_parent().open_spot_near(player.global_position, distance,
+		get_parent().body_radius(self))
 	FX.burst(get_parent(), global_position, Color(0.8, 0.3, 1.0), 14, 180.0, 0.35, 0.25)
-	global_position = get_parent().open_spot_near(player.global_position, distance)
+	if spot != null:
+		global_position = spot
 	FX.burst(get_parent(), global_position, Color(0.8, 0.3, 1.0), 14, 180.0, 0.35, 0.25)
 
 # Hex Shaman: closes in casting bolts that curve after you.

@@ -7,7 +7,9 @@ const WIDTH: float = 46.0  # How close to the line counts as a hit
 var direction: Vector2 = Vector2.RIGHT
 var reach: float = 340.0
 var damage: int = 1
+var crit: bool = false  # A Keen Eye critical hit (set by the player)
 var duration: float = 0.26
+const CritPopup = preload("res://scenes/ui/crit_popup.gd")
 
 var progress: float = 0.0:
 	set(value):
@@ -23,6 +25,9 @@ func _ready() -> void:
 			enemy.global_position, global_position, tip)
 		if nearest.distance_to(enemy.global_position) < WIDTH:
 			enemy.take_damage(damage)
+			if crit:
+				CritPopup.spawn(enemy.global_position)
+				crit = false  # One popup per thrust, however many it hits
 	Audio.play("orb_hit", -6.0, 0.2)
 	var tween := create_tween()
 	tween.tween_property(self, "progress", 1.0, duration)

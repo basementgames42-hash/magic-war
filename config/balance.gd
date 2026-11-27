@@ -56,13 +56,15 @@ extends Resource
 ## How much a boost multiplies gold, EXP or pickup drop chance.
 @export_range(1.0, 5.0, 0.5) var boost_multiplier: float = 2.0
 ## How long a boost lasts once earned, in seconds.
-@export_range(10.0, 300.0, 5.0) var boost_seconds: float = 60.0
+@export_range(10.0, 300.0, 5.0) var boost_seconds: float = 90.0
 ## Seconds into a run before the first boost offer.
 @export_range(0.0, 300.0, 5.0) var boost_first_offer: float = 30.0
 ## How long a boost offer stays on screen, in seconds.
-@export_range(3.0, 30.0, 1.0) var boost_offer_seconds: float = 15.0
-## Seconds until the next offer, after one is ignored or a boost runs out.
-@export_range(10.0, 600.0, 5.0) var boost_offer_gap: float = 120.0
+@export_range(3.0, 30.0, 1.0) var boost_offer_seconds: float = 20.0
+## Seconds from one offer leaving the screen (taken, ignored or skipped) to the
+## next. Offers keep coming while boosts are running, so this under
+## boost_seconds lets the player stack them.
+@export_range(10.0, 600.0, 5.0) var boost_offer_gap: float = 60.0
 
 @export_group("Player Speed")
 ## How fast the player moves at the start of a run (pixels/second).
@@ -106,8 +108,9 @@ extends Resource
 @export_group("Level-Up Choices")
 ## Most additional weapons per run (spells and level-up weapons), on top of
 ## the hero's own. Once reached, no new weapons are offered; upgrades to the
-## ones you have still are.
+## ones you have still are. Regular maps use the first, Endless the second.
 @export_range(1, 7) var max_extra_weapons: int = 3
+@export_range(1, 7) var endless_max_extra_weapons: int = 4
 ## Keen Eye level-up: chance per pick that a main-weapon attack is a critical
 ## hit, up to Crit Max; crits deal Crit Multiplier times the damage.
 @export_range(0.0005, 0.25, 0.0005) var crit_chance_per_pick: float = 0.05
@@ -116,17 +119,20 @@ extends Resource
 ## Epic Combos (purple level-up choices made from two of the run's
 ## additional weapons): only offered once the player is past this level...
 @export_range(0, 50) var epic_min_level: int = 7
-## ...at most this many per run...
+## ...at most this many per run (regular maps, then Endless: Endless's 4
+## extra weapons make 6 different pairs, so up to 6 Epics there)...
 @export_range(1, 3) var max_epics: int = 2
+@export_range(1, 6) var endless_max_epics: int = 6
 ## ...and on this share of level-ups (when there's a pair not yet combined),
 ## so a run may get both, one or none.
 @export_range(0.05, 1.0, 0.05) var epic_offer_chance: float = 0.35
 ## Multiplies every Epic Combo's damage.
 @export_range(0.25, 4.0, 0.05) var epic_damage_scale: float = 1.0
-## God-Tier Combos (gold level-up choices made from all three additional
-## weapons, Endless only): offered once, at the first level-up from this
-## level with three weapons taken. Three choices at once, one per run.
-@export_range(1, 100) var god_min_level: int = 20
+## God-Tier Combos (gold level-up choices made from three of the run's
+## additional weapons, Endless only): offered once, at the first level-up from
+## this level with at least three weapons taken (the first three you took).
+## Three choices at once, one per run.
+@export_range(1, 100) var god_min_level: int = 15
 ## Multiplies every God-Tier Combo's damage.
 @export_range(0.25, 4.0, 0.05) var god_damage_scale: float = 1.0
 ## Extra God-Tier damage per player level past god_min_level (0.04 = +4%).
@@ -216,7 +222,9 @@ extends Resource
 @export_range(0.0, 0.2, 0.01) var boss_health_per_player_level: float = 0.05
 ## Damage of one boss hit, before the usual multipliers.
 @export_range(1, 30) var boss_damage: int = 4
-## Boss size compared with a normal enemy (elites are 2.5).
+## Size of the last enemy type's elite on regular maps, compared with a normal
+## enemy. The boss and every other elite are 2.5 (ELITE_SCALE in main.gd), so
+## the boss is never smaller than its own kind.
 @export_range(1.0, 4.0, 0.05) var boss_scale: float = 1.75
 ## A nuke hits the boss for this share of its max health instead of killing it.
 @export_range(0.0, 1.0, 0.05) var boss_nuke_share: float = 0.1
