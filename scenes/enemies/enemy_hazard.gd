@@ -11,7 +11,8 @@ var fuse: float = 1.0
 var linger: float = 0.0
 var tick: float = 0.6
 var damage: int = 1
-var cap: int = 0  # Most this hit may take (0 = no cap)
+var cap: float = 0.0  # Most this hit may take on average (0 = no cap)
+var growth: float = 1.0  # Share of the wave/level damage bonus it gets
 var color: Color = Color(1.0, 0.35, 0.15)
 var icon: Texture2D = null     # Optional sprite sitting in the middle (a bomb)
 var flat: bool = false         # Costs exactly `damage` HP, no multipliers (goblin fire)
@@ -52,7 +53,7 @@ func _process(delta: float) -> void:
 func hurt_player() -> void:
 	if player != null and player.visible \
 			and global_position.distance_to(player.global_position) < radius:
-		player.take_damage(damage, ranged, flat, cap)
+		player.take_damage(damage, ranged, flat, cap, growth)
 
 func _draw() -> void:
 	if age < fuse:

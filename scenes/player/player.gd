@@ -105,9 +105,12 @@ func _ready() -> void:
 # ranged = a shot or lobbed bomb: reduced by BALANCE.ranged_damage_multiplier
 # and kept out of the swarm streak (that's for being mobbed up close).
 # flat = costs exactly `amount` HP: no multipliers, no swarm streak (goblins).
-func take_damage(amount: int, ranged: bool = false, flat: bool = false, cap: int = 0) -> void:
-	# cap > 0: the most this one hit may take (regular maps cap normal, elite
-	# and boss hits; see Balance map_*_hit_cap).
+func take_damage(amount: int, ranged: bool = false, flat: bool = false, cap: float = 0.0,
+		growth: float = 1.0) -> void:
+	# growth: how much of the wave/map/level bonus this hit gets (Endless elites
+	# ramp up slower than normal enemies; see Balance endless_elite_damage_growth).
+	# cap > 0: the most this one hit may take on average (normal, elite and
+	# boss hits are capped in both modes; see Balance map_*_hit_cap).
 	if health <= 0:
 		return  # Already dead; several enemies can hit on the same frame
 	if super_timer > 0.0:
@@ -136,14 +139,14 @@ func take_damage(amount: int, ranged: bool = false, flat: bool = false, cap: int
 
 		# Health is whole numbers, so carry the fraction over to the next hit:
 		# 1 damage x1.5 lands as 1, 2, 1, 2... instead of always rounding.
-		pending_damage += amount * damage_taken_multiplier * (1.0 + wave_damage_bonus) * streak_mult
+		var raw: float = amount * damage_taken_multiplier * (1.0 + wave_damage_bonus * growth) * streak_mult
+		if cap > 0.0:
+			raw = minf(raw, cap)  # The cap, so a 4.5 cap averages 4, 5, 4, 5...
+		pending_damage += raw
 		# A melee hit always costs at least 1. A weak ranged hit may cost nothing
 		# yet: its fraction waits for the next hit (so half damage really is half).
 		dealt = int(pending_damage) if ranged else maxi(int(pending_damage), 1)
 		pending_damage = maxf(pending_damage - dealt, 0.0)
-		if cap > 0 and dealt > cap:
-			dealt = cap
-			pending_damage = 0.0  # The excess is dropped, not saved for later
 	if dealt <= 0:
 		return
 

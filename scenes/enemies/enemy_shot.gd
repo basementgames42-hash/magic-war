@@ -7,7 +7,8 @@ var sheet: Texture2D           # One-row sheet of square frames
 var direction: Vector2 = Vector2.RIGHT
 var speed: float = 400.0
 var damage: int = 1
-var cap: int = 0  # Most this hit may take (0 = no cap)
+var cap: float = 0.0  # Most this hit may take on average (0 = no cap)
+var growth: float = 1.0  # Share of the wave/level damage bonus it gets
 var lifetime: float = 3.0
 var hit_radius: float = 28.0
 var spin: float = 0.0          # Radians/second; 0 = point along the flight path
@@ -40,5 +41,5 @@ func _process(delta: float) -> void:
 	rotation = rotation + spin * delta if spin != 0.0 else direction.angle()
 	sprite.frame = int(lifetime * 10.0) % sprite.hframes
 	if player.visible and to_player.length() < hit_radius:
-		player.take_damage(damage, true, false, cap)  # Ranged: reduced, no swarm streak
+		player.take_damage(damage, true, false, cap, growth)  # Ranged: reduced, no swarm streak
 		queue_free()

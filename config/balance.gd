@@ -185,19 +185,29 @@ extends Resource
 @export_range(0.25, 5.0, 0.05) var damage_taken_multiplier: float = 1.5
 ## Extra damage taken per new enemy type (wave). 0.25 = +25% per wave.
 @export_range(0.0, 1.0, 0.05) var wave_damage_bonus: float = 0.25
-## Regular maps (not Endless) use these instead of the three settings above,
-## so a map run tops out at about 2 per normal hit, 7 per elite hit and 8 per
-## boss hit on the last map. Endless keeps the ones above.
+## Both modes (maps and Endless) use these instead of the three settings
+## above (which are no longer used), so a map run tops out at about 2 per
+## normal hit, 7 per elite hit and 8 per boss hit on the last map, and the
+## caps below hold in Endless however long it runs.
 @export_range(0.25, 5.0, 0.05) var map_damage_taken_multiplier: float = 1.0
+## Per wave on regular maps (5 waves, one a minute).
 @export_range(0.0, 1.0, 0.01) var map_wave_damage_bonus: float = 0.1
+## Per wave in Endless (one a minute; waves after Endless Full Waves count
+## half). 0.25 brings normal hits to the Normal Hit Cap at about 20 minutes.
+@export_range(0.0, 1.0, 0.01) var endless_wave_damage_bonus: float = 0.25
 @export_range(0.0, 0.2, 0.005) var map_damage_per_player_level: float = 0.01
-## Base damage of an elite's hit on regular maps.
+## Endless elites get only this share of the wave and level bonus, so they
+## ramp from 4 per hit to the Elite Hit Cap at about 20 minutes (normal hits
+## reach theirs then too) instead of within the first few minutes.
+@export_range(0.05, 1.0, 0.01) var endless_elite_damage_growth: float = 0.22
+## Base damage of an elite's hit (both modes; Elite Damage above is unused).
 @export_range(1, 20) var map_elite_damage: int = 4
-## Regular maps: the most one hit can ever take, after every multiplier and
-## the swarm streak. Flat-damage enemies already do less than these.
-@export_range(1, 50) var map_hit_cap: int = 3
-@export_range(1, 50) var map_elite_hit_cap: int = 7
-@export_range(1, 50) var map_boss_hit_cap: int = 8
+## The most one hit can ever take on average (both modes), after every
+## multiplier and the swarm streak: 4.5 lands as 4, 5, 4, 5... A normal hit
+## is never allowed above the elite cap. Flat-damage enemies do less anyway.
+@export_range(1.0, 50.0, 0.5) var map_hit_cap: float = 4.5
+@export_range(1.0, 50.0, 0.5) var map_elite_hit_cap: float = 7.0
+@export_range(1.0, 50.0, 0.5) var map_boss_hit_cap: float = 8.0
 ## Ranged hits (thrown bones, harpoons, hex bolts, lobbed bombs) do this
 ## share of a melee hit (0.5 = half), and never build the swarm streak below.
 @export_range(0.1, 1.0, 0.05) var ranged_damage_multiplier: float = 0.5
