@@ -60,6 +60,8 @@ var custom_frames: SpriteFrames = null
 var flat_hit: bool = false
 var flat_contact: int = 1
 var flat_fire: int = 1
+var hit_cap: float = 0.0  # Most one of its hits may take on average (0 = no cap); set by Main
+var hit_growth: float = 1.0  # Share of the wave/level damage bonus its hits get (Endless elites: less)
 var variant_tint: Color = Color.WHITE  # A new map's variant of a known creature (set by Main)
 var is_boss: bool = false  # The map's final boss (set by Main): glows, shrugs off nukes
 # Obstacle avoidance: the wall we're touching (its surface normal) and
@@ -205,7 +207,7 @@ func _physics_process(delta: float) -> void:
 	attack_timer -= delta
 	if can_bite and attack_timer <= 0.0 and player.visible \
 			and global_position.distance_to(player.global_position) <= touch_distance:
-		player.take_damage(flat_contact if flat_hit else contact_damage, false, flat_hit)
+		player.take_damage(flat_contact if flat_hit else contact_damage, false, flat_hit, hit_cap, hit_growth)
 		if ai == "slither":
 			player.apply_slow(0.6, 1.5)  # Venom
 		show_attack()
@@ -701,6 +703,8 @@ func spawn_shot(sheet: Texture2D, direction: Vector2, speed: float, spin: float,
 	shot.spin = spin
 	shot.homing = homing
 	shot.damage = contact_damage
+	shot.cap = hit_cap
+	shot.growth = hit_growth
 	shot.global_position = global_position
 	get_parent().add_child(shot)
 
@@ -715,6 +719,8 @@ func spawn_hazard(pos: Vector2, radius: float, fuse: float, linger: float, color
 	hazard.icon = icon
 	hazard.damage = flat_fire if flat_hit else contact_damage
 	hazard.flat = flat_hit
+	hazard.cap = hit_cap
+	hazard.growth = hit_growth
 	hazard.global_position = pos
 	get_parent().add_child(hazard)
 

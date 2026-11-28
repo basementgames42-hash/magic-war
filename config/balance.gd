@@ -19,6 +19,9 @@ extends Resource
 ## Minutes the drift into the next map takes: the ground and foliage colours
 ## blend, and buildings, trees and rocks change a few at a time while off-screen.
 @export_range(0.1, 10.0, 0.1) var endless_blend_minutes: float = 0.5
+## Extra max health the hero starts every Endless run with (on top of
+## Vitality upgrades and the rest).
+@export_range(0, 100) var endless_bonus_hp: int = 10
 
 @export_group("Difficulty Scaling")
 ## Extra enemy health per player level above 1 (0.08 = +8% each level).
@@ -47,7 +50,7 @@ extends Resource
 @export_group("Ads")
 ## Watch-an-ad revives allowed per run. 0 turns the offer off; -1 = no
 ## limit (offered after every death).
-@export_range(-1, 10) var revives_per_run: int = -1
+@export_range(-1, 10) var revives_per_run: int = 2
 ## Seconds of invincibility after a revive, to get clear of the swarm.
 @export_range(0.0, 10.0, 0.5) var revive_invincible_seconds: float = 3.0
 ## How much a boost multiplies gold, EXP or pickup drop chance.
@@ -110,7 +113,7 @@ extends Resource
 @export_range(1, 7) var endless_max_extra_weapons: int = 4
 ## Keen Eye level-up: chance per pick that a main-weapon attack is a critical
 ## hit, up to Crit Max; crits deal Crit Multiplier times the damage.
-@export_range(0.0005, 0.25, 0.0005) var crit_chance_per_pick: float = 0.025
+@export_range(0.0005, 0.25, 0.0005) var crit_chance_per_pick: float = 0.05
 @export_range(0.05, 1.0, 0.05) var crit_max: float = 0.5
 @export_range(1.25, 4.0, 0.25) var crit_multiplier: float = 2.0
 ## Epic Combos (purple level-up choices made from two of the run's
@@ -130,6 +133,8 @@ extends Resource
 ## this level with at least three weapons taken (the first three you took).
 ## Three choices at once, one per run.
 @export_range(1, 100) var god_min_level: int = 15
+## A second God-Tier is offered at this level (Endless; 0 = only one per run).
+@export_range(0, 100) var god_second_level: int = 20
 ## Multiplies every God-Tier Combo's damage.
 @export_range(0.25, 4.0, 0.05) var god_damage_scale: float = 1.0
 ## Extra God-Tier damage per player level past god_min_level (0.04 = +4%).
@@ -182,6 +187,29 @@ extends Resource
 @export_range(0.25, 5.0, 0.05) var damage_taken_multiplier: float = 1.5
 ## Extra damage taken per new enemy type (wave). 0.25 = +25% per wave.
 @export_range(0.0, 1.0, 0.05) var wave_damage_bonus: float = 0.25
+## Both modes (maps and Endless) use these instead of the three settings
+## above (which are no longer used), so a map run tops out at about 2 per
+## normal hit, 7 per elite hit and 8 per boss hit on the last map, and the
+## caps below hold in Endless however long it runs.
+@export_range(0.25, 5.0, 0.05) var map_damage_taken_multiplier: float = 1.0
+## Per wave on regular maps (5 waves, one a minute).
+@export_range(0.0, 1.0, 0.01) var map_wave_damage_bonus: float = 0.1
+## Per wave in Endless (one a minute; waves after Endless Full Waves count
+## half). 0.25 brings normal hits to the Normal Hit Cap at about 20 minutes.
+@export_range(0.0, 1.0, 0.01) var endless_wave_damage_bonus: float = 0.25
+@export_range(0.0, 0.2, 0.005) var map_damage_per_player_level: float = 0.01
+## Endless elites get only this share of the wave and level bonus, so they
+## ramp from 4 per hit to the Elite Hit Cap at about 20 minutes (normal hits
+## reach theirs then too) instead of within the first few minutes.
+@export_range(0.05, 1.0, 0.01) var endless_elite_damage_growth: float = 0.22
+## Base damage of an elite's hit (both modes; Elite Damage above is unused).
+@export_range(1, 20) var map_elite_damage: int = 4
+## The most one hit can ever take on average (both modes), after every
+## multiplier and the swarm streak: 4.5 lands as 4, 5, 4, 5... A normal hit
+## is never allowed above the elite cap. Flat-damage enemies do less anyway.
+@export_range(1.0, 50.0, 0.5) var map_hit_cap: float = 4.5
+@export_range(1.0, 50.0, 0.5) var map_elite_hit_cap: float = 7.0
+@export_range(1.0, 50.0, 0.5) var map_boss_hit_cap: float = 8.0
 ## Ranged hits (thrown bones, harpoons, hex bolts, lobbed bombs) do this
 ## share of a melee hit (0.5 = half), and never build the swarm streak below.
 @export_range(0.1, 1.0, 0.05) var ranged_damage_multiplier: float = 0.5

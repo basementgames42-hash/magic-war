@@ -1,10 +1,10 @@
 extends Control
 # Ad Offer: the card under the Level ribbon. Every so often it slides in with
 # a free reward for watching an ad, picked from ShopCatalog.AD_OFFERS:
-#   - x2 Gold / EXP / Drops for a while
-#   - a free Second Chance, or a Shop boost (Elixir, Charm, Tome) for this run
-#   - gems, for two ads back to back
-# Only things sold for coins in the Shop (never gem items). Timing is in
+#   - Double Gold / EXP / Drops, or Power Surge (+50% damage), for a while
+#   - or 10 gems, for two ads back to back (at most twice a run)
+# Every offer is a timed boost; they stack with each other and with this
+# run's consumables (see ShopCatalog.AD_OFFERS). Timing is in
 # res://config/balance.tres (boost_*). Its countdowns stop whenever the game
 # is paused, like everything in a run.
 #
@@ -18,7 +18,8 @@ enum State { WAITING, OFFERING, WATCHING, REWARD }
 
 const CARD_SIZE := Vector2(340, 96)
 const TEXT_X: float = 86.0
-var home := Vector2(14, 156)   # Set each frame by main.gd (stack_status_column)
+const HOME := Vector2(14, 156)  # Default spot; Main moves it under the HUD (set_home)
+var home: Vector2 = HOME
 const GOLD := Color(1.0, 0.82, 0.32)
 const INK := Color(0.09, 0.11, 0.2, 0.94)
 
@@ -50,10 +51,21 @@ func _ready() -> void:
 	build()
 	# A sibling, not a child, so the list stays up while the card is hidden.
 	badges = VBoxContainer.new()
-	badges.position = home + Vector2(0, CARD_SIZE.y + 8)
+	badges.position = home + Vector2(4, CARD_SIZE.y + 8)
 	badges.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	badges.add_theme_constant_override("separation", 4)
 	add_sibling.call_deferred(badges)
+
+func set_column(top: Vector2) -> void:
+	# Main gives the spot under the Level ribbon and effect icons. The running
+	# boost badges go there, newest last, and the offer card goes under them.
+	# The card glides to its new height in _process.
+	var y: float = top.y
+	if badges != null:
+		badges.position = top
+		if not badge_nodes.is_empty():
+			y += badges.get_combined_minimum_size().y + 8.0
+	home = Vector2(top.x, y)
 
 # --- Look ---------------------------------------------------------------------
 
@@ -183,23 +195,20 @@ func offer_title(o: Dictionary) -> String:
 
 func offer_detail(o: Dictionary) -> String:
 	match o["kind"]:
-		"boost": return o["detail"] % int(BALANCE.boost_seconds)
+		"boost":
+			if boosts.has(o["id"]):
+				return "+%ds more (%ds left now)" % [int(BALANCE.boost_seconds), ceili(boosts[o["id"]])]
+			return o["detail"] % int(BALANCE.boost_seconds)
 		"gems": return o["detail"] % o["ads"]
 	return o["detail"]
 
 func eligible(o: Dictionary) -> bool:
+	# Every offer is a timed boost, and they stack: a running one can come up
+	# again to add more time. Just never the same one twice in a row.
 	if o["id"] == last_id:
-		return false  # Never the same one twice in a row
-	match o["kind"]:
-		"stock":
-			var item: Dictionary = ShopCatalog.consumable(o["id"])
-			return GameData.stock_count(o["id"]) < item.get("max", 99)
-		"effect":
-			return not o["id"] in GameData.run_effects
-		"gems":
-			return gem_offers < ShopCatalog.GEM_OFFERS_PER_RUN
-		"boost":
-			return not boosts.has(o["id"])  # Already running: offer something else
+		return false
+	if o["kind"] == "gems":
+		return gem_offers < ShopCatalog.GEM_OFFERS_PER_RUN  # At most twice a run
 	return true
 
 func _process(delta: float) -> void:
@@ -274,7 +283,7 @@ func give_reward() -> void:
 	var player: Node = get_tree().get_first_node_in_group("player")
 	match offer["kind"]:
 		"boost":
-			boosts[offer["id"]] = BALANCE.boost_seconds
+			boosts[offer["id"]] = boosts.get(offer["id"], 0.0) + BALANCE.boost_seconds  # Stacks
 			if not offer["id"] in GameData.active_boosts:
 				GameData.active_boosts.append(offer["id"])
 			tick_boosts(0.0)
@@ -288,7 +297,7 @@ func give_reward() -> void:
 			GameData.add_gems(offer["gems"])
 	state = State.REWARD
 	timer = 2.5
-	var got: String = {"boost": "Active for %ds" % int(BALANCE.boost_seconds),
+	var got: String = {"boost": "Active for %ds" % ceili(boosts.get(offer["id"], 0.0)),
 		"stock": "Ready for when you fall", "effect": "Working for the rest of this run",
 		"gems": "Added to your gems"}[offer["kind"]]
 	show_card("REWARD!", offer_title(offer), got, false)

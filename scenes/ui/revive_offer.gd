@@ -1,8 +1,8 @@
 extends CanvasLayer
-# Revive Offer: shown when the player dies and can come back, either by using
-# a Second Chance (bought in the Shop, or Phoenix Feather's free one) or by
-# watching an ad. Main pauses the game behind it and decides what each
-# answer does. Call open() to show it with the right buttons.
+# Revive Offer: shown when the player dies and still has an ad revive left
+# this run (BALANCE.revives_per_run). A Second Chance / Phoenix Feather never
+# shows it: Main uses that up on its own at the first death. Main pauses the
+# game behind it and decides what each answer does.
 
 signal accepted       # Watch an ad
 signal chance_used    # Use a Second Chance
@@ -55,11 +55,14 @@ func _ready() -> void:
 	give_up.pressed.connect(_on_answer.bind(declined))
 	column.add_child(give_up)
 
-func open(chances: int, ad: bool) -> void:
-	chance_button.visible = chances > 0
-	chance_button.text = "Use Second Chance (%d left)" % chances
+func open(ads_left: int, ad: bool) -> void:
+	# A Second Chance / Phoenix Feather is used up on its own at the first
+	# death (Main), so this only ever offers the ad revive now.
+	chance_button.visible = false
 	watch_button.visible = ad
-	body.text = "Fight on from here?" if chances > 0 else "Watch an ad to fight on from here?"
+	body.text = "Watch an ad to fight on from here?"
+	if ads_left > 0:
+		body.text += "\n%d ad revive%s left this run" % [ads_left, "" if ads_left == 1 else "s"]
 	visible = true
 
 func _on_answer(answer: Signal) -> void:

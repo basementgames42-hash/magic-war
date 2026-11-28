@@ -94,6 +94,8 @@ func _ready() -> void:
 	# Shop: Battle Elixir (this run) and Heart of the Titan (premium).
 	weapon_damage = roundi(weapon_damage * GameData.damage_factor())
 	max_health += GameData.bonus_max_hp()
+	if GameData.endless:
+		max_health += BALANCE.endless_bonus_hp  # Endless runs start a little tougher
 	move_speed *= 1.0 + BALANCE.agility_per_level * GameData.meta_upgrades["move_speed"]
 	regen_rate = BALANCE.regen_per_level * GameData.meta_upgrades["regen"]
 	fire_cooldown *= 1.0 - BALANCE.fire_rate_per_level * GameData.meta_upgrades["fire_rate"]
@@ -103,7 +105,12 @@ func _ready() -> void:
 # ranged = a shot or lobbed bomb: reduced by BALANCE.ranged_damage_multiplier
 # and kept out of the swarm streak (that's for being mobbed up close).
 # flat = costs exactly `amount` HP: no multipliers, no swarm streak (goblins).
-func take_damage(amount: int, ranged: bool = false, flat: bool = false) -> void:
+func take_damage(amount: int, ranged: bool = false, flat: bool = false, cap: float = 0.0,
+		growth: float = 1.0) -> void:
+	# growth: how much of the wave/map/level bonus this hit gets (Endless elites
+	# ramp up slower than normal enemies; see Balance endless_elite_damage_growth).
+	# cap > 0: the most this one hit may take on average (normal, elite and
+	# boss hits are capped in both modes; see Balance map_*_hit_cap).
 	if health <= 0:
 		return  # Already dead; several enemies can hit on the same frame
 	if super_timer > 0.0:
@@ -132,7 +139,10 @@ func take_damage(amount: int, ranged: bool = false, flat: bool = false) -> void:
 
 		# Health is whole numbers, so carry the fraction over to the next hit:
 		# 1 damage x1.5 lands as 1, 2, 1, 2... instead of always rounding.
-		pending_damage += amount * damage_taken_multiplier * (1.0 + wave_damage_bonus) * streak_mult
+		var raw: float = amount * damage_taken_multiplier * (1.0 + wave_damage_bonus * growth) * streak_mult
+		if cap > 0.0:
+			raw = minf(raw, cap)  # The cap, so a 4.5 cap averages 4, 5, 4, 5...
+		pending_damage += raw
 		# A melee hit always costs at least 1. A weak ranged hit may cost nothing
 		# yet: its fraction waits for the next hit (so half damage really is half).
 		dealt = int(pending_damage) if ranged else maxi(int(pending_damage), 1)
@@ -250,7 +260,8 @@ func fire_at(target: Node2D) -> void:
 	shot.direction = aim
 	# Keen Eye: some attacks are critical hits, for double (BALANCE) damage.
 	var crit: bool = randf() < crit_chance
-	shot.damage = roundi(weapon_damage * BALANCE.crit_multiplier) if crit else weapon_damage
+	var hit: float = weapon_damage * GameData.boost_damage_factor()  # Power Surge ad boost
+	shot.damage = roundi(hit * BALANCE.crit_multiplier) if crit else roundi(hit)
 	shot.crit = crit  # The shot shows CRITICAL! where it lands
 	get_parent().add_child(shot)
 

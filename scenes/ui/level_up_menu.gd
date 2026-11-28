@@ -10,7 +10,7 @@ extends CanvasLayer
 # up to epic_limit() per run (Endless allows more: see BALANCE).
 # Endless only: from BALANCE.god_min_level, once three additional weapons
 # are taken, one level-up offers three gold God-Tier Combos instead
-# (god_combo.gd), one led by each weapon. One per run.
+# (god_combo.gd), one led by each weapon. A second comes at god_second_level.
 
 const BALANCE: Balance = preload("res://config/balance.tres")
 const EPIC_COMBO = preload("res://scenes/spells/epic_combo.gd")
@@ -76,7 +76,7 @@ var weapon_ids: Dictionary = {}             # Levelled weapon name -> its id
 var extra_weapons: int = 0                  # New weapons taken this run (spells + level-up weapons)
 var acquired: Array[String] = []            # Their ids, in pick order ("lightning", "starfall"...)
 var epics_taken: Array[String] = []         # Epic Combo ids gained this run
-var god_taken: bool = false                 # A God-Tier Combo was chosen this run
+var gods_taken: Array[String] = []          # God-Tier Combos chosen this run (up to two)
 var buttons: Array = []
 var player: Node = null
 
@@ -101,6 +101,10 @@ func open() -> void:
 	set_heading(god)
 
 	for i in 3:
+		# A second God-Tier can come with only two choices: hide the spare button.
+		buttons[i].visible = i < current_choices.size()
+		if not buttons[i].visible:
+			continue
 		buttons[i].text = current_choices[i]["name"] + "\n" + describe(current_choices[i])
 		var tint: Variant = GOD_TINT if current_choices[i].has("god") \
 			else (EPIC_TINT if current_choices[i].has("epic") else null)
@@ -158,17 +162,35 @@ const GOD_WEAPONS: int = 3  # A God-Tier is one lead weapon plus two infused one
 func god_ready() -> bool:
 	# Endless, past the level, three extra weapons in hand, none taken yet.
 	# (A run can hold four; God-Tier doesn't wait for the fourth.)
-	return GameData.endless and not god_taken and player.level >= BALANCE.god_min_level \
-		and acquired.size() >= GOD_WEAPONS
+	# The first from god_min_level, a second from god_second_level.
+	if not GameData.endless or acquired.size() < GOD_WEAPONS:
+		return false
+	match gods_taken.size():
+		0: return player.level >= BALANCE.god_min_level
+		1: return BALANCE.god_second_level > 0 and player.level >= BALANCE.god_second_level \
+			and not god_options().is_empty()
+	return false
 
 func god_options() -> Array:
 	# Three God-Tiers from the same three weapons: each one led by a
 	# different weapon, with the other two infused into it.
-	var trio: Array[String] = acquired.slice(0, GOD_WEAPONS)  # The first three taken
+	# The first offer: the first three weapons taken. The second: any God-Tier
+	# from the run's weapons not taken yet, different leads first (with only
+	# three weapons that's the other two from the first offer).
+	var ids: Array[String] = []
+	var pool: Array[String] = acquired.slice(0, GOD_WEAPONS) if gods_taken.is_empty() else acquired
+	for a in pool.size():
+		for b in range(a + 1, pool.size()):
+			for c in range(b + 1, pool.size()):
+				var trio: Array = [pool[a], pool[b], pool[c]]
+				for lead in trio:
+					var id: String = GOD_COMBO.combo_id(lead, trio.filter(func(w): return w != lead))
+					if not id in gods_taken and not id in ids:
+						ids.append(id)
+	var used_leads: Array = gods_taken.map(func(g): return GOD_COMBO.parts(g)[0])
+	ids.sort_custom(func(x, y): return int(GOD_COMBO.parts(x)[0] in used_leads) < int(GOD_COMBO.parts(y)[0] in used_leads))
 	var out: Array = []
-	for lead in trio:
-		var others: Array = trio.filter(func(w): return w != lead)
-		var id: String = GOD_COMBO.combo_id(lead, others)
+	for id in ids.slice(0, 3):
 		out.append({"god": id, "name": "GOD-TIER: " + GOD_COMBO.title(id), "desc": GOD_COMBO.blurb(id)})
 	return out
 
@@ -306,6 +328,8 @@ func god_reveal() -> void:
 			FX.burst(self, at, color, 28, 460.0, 0.9, 0.45)
 	for i in buttons.size():
 		var b: Button = buttons[i]
+		if not b.visible:
+			continue  # A spare button hidden for a two-choice second God-Tier
 		b.pivot_offset = b.size * 0.5
 		b.scale = Vector2.ONE * 0.6
 		b.modulate.a = 0.0
@@ -382,7 +406,7 @@ func _on_option_pressed(index: int) -> void:
 	var choice: Dictionary = current_choices[index]
 	if choice.has("god"):
 		player.add_god(choice["god"])
-		god_taken = true
+		gods_taken.append(choice["god"])
 		spells_taken.append("God-Tier: " + GOD_COMBO.title(choice["god"]))
 		visible = false
 		get_tree().paused = false

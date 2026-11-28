@@ -79,7 +79,7 @@ const MAPS: Array[Dictionary] = [
 		"rocks": ["rock2", "rock3", "bones1", "bones2", "gold_stone2"],
 		"scatter": [22, 55, 25],
 		"seed": 23,
-		"health": 1.4, "damage": 0.25, "spawn": 1.1,
+		"health": 1.4, "damage": 0.07, "spawn": 1.1,
 		"landmarks": [
 			["goblin_hut", -260, -340], ["goblin_hut", 270, -360], ["goblin_hut", -60, -560],
 			["tower", -520, -520], ["tower", 520, -540], ["barracks", 0, -760],
@@ -109,7 +109,7 @@ const MAPS: Array[Dictionary] = [
 		"rocks": ["rock1", "rock4", "stump"],
 		"scatter": [28, 24, 90],
 		"seed": 41,
-		"health": 1.9, "damage": 0.5, "spawn": 1.2,
+		"health": 1.9, "damage": 0.14, "spawn": 1.2,
 		"landmarks": [
 			["fish_hut", -300, 300], ["fish_hut", -520, 420], ["fish_hut", -160, 520],
 			["pirate_tower", -640, 620], ["pirate_tower", 40, 680],
@@ -139,7 +139,7 @@ const MAPS: Array[Dictionary] = [
 		"rocks": ["skull_spike1", "skull_spike2", "bones1", "bones2", "rock3"],
 		"scatter": [34, 60, 12],
 		"seed": 67,
-		"health": 2.5, "damage": 0.75, "spawn": 1.3,
+		"health": 2.5, "damage": 0.21, "spawn": 1.3,
 		"landmarks": [
 			["castle", 0, 620], ["tower", -240, 650], ["tower", 240, 650],
 			["skull_spike2", -130, 300], ["skull_spike2", 130, 300],
@@ -172,7 +172,7 @@ const MAPS: Array[Dictionary] = [
 		"rocks": ["rock1", "rock2", "rock4", "stump"],
 		"scatter": [48, 42, 25],
 		"seed": 89,
-		"health": 3.0, "damage": 0.9, "spawn": 1.35,
+		"health": 3.0, "damage": 0.26, "spawn": 1.35,
 		"landmarks": [
 			["castle", 0, -700], ["tower", -290, -700], ["tower", 290, -700],
 			["house1", -600, 380], ["house2", -820, 520], ["house3", -560, 640],
@@ -205,7 +205,7 @@ const MAPS: Array[Dictionary] = [
 		"rocks": ["rock3", "bones1", "skull_spike1", "stump"],
 		"scatter": [55, 28, 45],
 		"seed": 113,
-		"health": 3.5, "damage": 1.05, "spawn": 1.4,
+		"health": 3.5, "damage": 0.3, "spawn": 1.4,
 		"landmarks": [
 			["monastery", 0, -680], ["house3", -320, -620], ["house2", 320, -620],
 			["house1", -780, 320], ["tower", -1000, 420], ["dead_tree", -560, 520],
@@ -239,7 +239,7 @@ const MAPS: Array[Dictionary] = [
 		"rocks": ["rock2", "rock3", "bones2", "gold_stone2", "skull_spike2"],
 		"scatter": [14, 58, 15],
 		"seed": 137,
-		"health": 4.0, "damage": 1.2, "spawn": 1.45,
+		"health": 4.0, "damage": 0.34, "spawn": 1.45,
 		"landmarks": [
 			["castle", 0, 700], ["tower", -280, 720], ["tower", 280, 720],
 			["gold_stone", -620, -420], ["gold_stone2", -520, -340], ["bones1", -720, -300],
@@ -273,7 +273,7 @@ const MAPS: Array[Dictionary] = [
 		"rocks": ["skull_spike1", "skull_spike2", "bones1", "bones2", "rock3"],
 		"scatter": [22, 72, 8],
 		"seed": 151,
-		"health": 4.6, "damage": 1.35, "spawn": 1.5,
+		"health": 4.6, "damage": 0.39, "spawn": 1.5,
 		"landmarks": [
 			["castle", 0, -720], ["tower", -300, -740], ["tower", 300, -740],
 			["skull_spike2", -150, -420], ["skull_spike2", 150, -420],
@@ -310,7 +310,7 @@ const MAPS: Array[Dictionary] = [
 		"rocks": ["rock1", "rock4", "stump"],
 		"scatter": [20, 30, 60],
 		"seed": 173,
-		"health": 5.2, "damage": 1.45, "spawn": 1.55,
+		"health": 5.2, "damage": 0.41, "spawn": 1.55,
 		"landmarks": [
 			["pirate_tower", -320, -560], ["fish_hut", -560, -420], ["fish_hut", -120, -640],
 			["pirate_tower", 760, 420], ["fish_hut", 1000, 560], ["fish_hut", 560, 620],
@@ -343,7 +343,7 @@ const MAPS: Array[Dictionary] = [
 		"rocks": ["rock2", "rock3", "stump"],
 		"scatter": [18, 26, 12],
 		"seed": 197,
-		"health": 5.9, "damage": 1.55, "spawn": 1.6,
+		"health": 5.9, "damage": 0.44, "spawn": 1.6,
 		"landmarks": [
 			["castle", 0, -720], ["tower", -320, -740], ["tower", 320, -740],
 			["barracks", -700, -420], ["barracks", 700, -420], ["archery", -1100, 200],
@@ -376,7 +376,7 @@ const MAPS: Array[Dictionary] = [
 		"rocks": ["rock1", "rock2", "rock3", "rock4", "stump", "skull_spike1"],
 		"scatter": [40, 55, 40],
 		"seed": 211,
-		"health": 6.6, "damage": 1.65, "spawn": 1.65,
+		"health": 6.6, "damage": 0.47, "spawn": 1.65,
 		"landmarks": [
 			["monastery", 0, -700], ["tower", -300, -680], ["tower", 300, -680],
 			["dead_tree", -700, 300], ["rock3", -560, 480], ["tower", -900, 520],
@@ -410,7 +410,7 @@ const MAPS: Array[Dictionary] = [
 		"rocks": ["skull_spike1", "skull_spike2", "bones1", "rock3"],
 		"scatter": [16, 60, 6],
 		"seed": 239,
-		"health": 7.4, "damage": 1.75, "spawn": 1.7,
+		"health": 7.4, "damage": 0.5, "spawn": 1.7,
 		"landmarks": [
 			["castle", 0, -750], ["tower", -330, -770], ["tower", 330, -770],
 			["skull_spike2", -160, -440], ["skull_spike2", 160, -440],

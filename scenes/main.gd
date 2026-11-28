@@ -35,8 +35,11 @@ var enemy_type: Dictionary = {}             # The type spawning now
 var wave_interval: float = 60.0             # Seconds per enemy type, set in _ready
 var frames_cache: Dictionary = {}           # Enemy type name -> SpriteFrames
 var kills: int = 0                          # Enemies killed this run (HUD, top right)
-var revives_left: int = BALANCE.revives_per_run
+var revives_left: int = BALANCE.revives_per_run  # Ad revives left this run
+var first_death_done: bool = false  # A Second Chance / Phoenix only saves the first death
 var revive_offer: CanvasLayer
+var effect_icons: Control
+var ad_card: Control
 var map_stage: int = 0                      # Endless: how many maps it has moved on
 var morph_wait: float = 0.0                 # Endless: seconds until the next World.morph
 # The map's final boss: arrives with BALANCE.boss_arrives_seconds_left to go;
@@ -45,8 +48,6 @@ var boss: CharacterBody2D = null
 var boss_spawned: bool = false
 var boss_down: bool = false
 var boss_hud: Control
-var boost_offer: Control                    # Ad offer card + running ad boosts
-var effect_icons: Control                   # This run's consumables
 
 func _enter_tree() -> void:
 	# Before the player's _ready, so this run's shop consumables are working
@@ -65,10 +66,10 @@ func _ready() -> void:
 	revive_offer.declined.connect(finish_run)
 	revive_offer.chance_used.connect(_on_second_chance_used)
 	add_child(revive_offer)
-	boost_offer = BOOST_OFFER.new()
-	$HUD.add_child(boost_offer)
+	ad_card = BOOST_OFFER.new()
+	$HUD.add_child(ad_card)
 	effect_icons = EFFECT_ICONS.new()
-	$HUD.add_child(effect_icons)  # Icons for this run's consumables, under the Level ribbon
+	$HUD.add_child(effect_icons)  # Icons for this run's consumables, beside the Level ribbon
 	boss_hud = BOSS_HUD.new()
 	$HUD.add_child(boss_hud)
 	WindowControls.layout_changed.connect(fit_hud)
@@ -82,6 +83,7 @@ func _ready() -> void:
 	player.health_changed.connect(_on_health_changed)
 	player.died.connect(_on_player_died)
 
+	player.damage_taken_multiplier = BALANCE.map_damage_taken_multiplier
 	update_damage_bonus()
 	_on_xp_changed(player.xp, player.xp_to_next)
 	_on_health_changed(player.max_health, player.max_health)
@@ -115,6 +117,7 @@ func _physics_process(_delta: float) -> void:
 			ENEMY_SCRIPT.far_distance = (get_viewport_rect().size / camera.zoom).length() * 0.5 + 250.0
 
 func _process(delta: float) -> void:
+	layout_hud()
 	if run_over:
 		return
 	elapsed += delta
@@ -146,7 +149,6 @@ func _process(delta: float) -> void:
 		else:
 			enemy_type = enemy_order[mini(wave, enemy_order.size() - 1)]
 		update_damage_bonus()
-	stack_status_column()
 	if endless:
 		drift_map(delta)
 		check_unlocks()
@@ -154,25 +156,6 @@ func _process(delta: float) -> void:
 	# Elite alarm.
 	if elapsed >= next_elite_at and spawn_elite():
 		next_elite_at += elite_interval  # Not placed yet: tries again next frame
-
-func stack_status_column() -> void:
-	# One column down the left, under the Level ribbon, top to bottom:
-	#   1. consumables working this run (Elixir, Charm, Tome)
-	#   2. timed boosts won from ads (x2 Gold / EXP / Drops), newest last
-	#   3. the ad offer card, when one is up
-	# Each part pushes the ones below it down, so nothing overlaps.
-	var level: Control = $HUD/LevelLabel
-	var x: float = level.position.x
-	var y: float = level.position.y + level.size.y + 6.0
-	effect_icons.position = Vector2(x, y)
-	if not effect_icons.shown.is_empty():
-		y += EFFECT_ICONS.ICON_SIZE + 8.0
-	var badges: Control = boost_offer.badges
-	if badges != null:
-		badges.position = Vector2(x, y)
-		if not boost_offer.badge_nodes.is_empty():
-			y += badges.get_combined_minimum_size().y + 8.0
-	boost_offer.home = Vector2(x, y)
 
 func update_clock() -> void:
 	# Endless counts up (how long you've lasted). A map counts down to the
@@ -201,8 +184,7 @@ func drift_map(delta: float) -> void:
 	var t: float = smoothstep(hold, hold + blend, into)
 	$Ground.modulate = Levels.MAPS[from]["ground"].lerp(Levels.MAPS[to]["ground"], t)
 	if stage != map_stage:
-		map_stage = stage
-		show_map_banner(Levels.MAPS[from]["name"].to_upper())  # Fully arrived
+		map_stage = stage  # Arrived on the next map (no name banner: it just changes)
 	morph_wait -= delta
 	if morph_wait <= 0.0:
 		morph_wait = 0.25
@@ -270,8 +252,11 @@ func update_damage_bonus() -> void:
 	# Every hit the player takes gets stronger with each new enemy type, on
 	# harder maps, and as the player levels up — including hits from enemies
 	# already on the field.
-	player.wave_damage_bonus = wave_strength() * BALANCE.wave_damage_bonus + map["damage"] \
-		+ levels_gained() * BALANCE.damage_per_player_level
+	# Both modes use the gentler map_* settings in the Balance (with per-hit
+	# caps on normal, elite and boss hits).
+	var per_wave: float = BALANCE.endless_wave_damage_bonus if endless else BALANCE.map_wave_damage_bonus
+	var per_level: float = BALANCE.map_damage_per_player_level
+	player.wave_damage_bonus = wave_strength() * per_wave + map["damage"] + levels_gained() * per_level
 
 func _on_health_changed(current_hp: int, max_hp: int) -> void:
 	$HUD/HPBar.max_value = max_hp
@@ -305,12 +290,20 @@ func win_level() -> void:
 			stats, true)
 
 func _on_player_died() -> void:
-	# revives_left below 0 = unlimited (BALANCE.revives_per_run = -1).
-	# A Second Chance (Shop) works even where there are no ads.
+	# First death: a Phoenix Feather or Second Chance revives on its own, no
+	# questions. After that (or with neither), up to revives_per_run ad
+	# revives (below 0 = unlimited); once they are gone the run ends.
+	if not first_death_done:
+		first_death_done = true
+		var phoenix: bool = GameData.free_revive
+		if GameData.use_second_chance():
+			player.revive.call_deferred()  # After die() finishes hiding the player
+			show_map_banner("PHOENIX FEATHER!" if phoenix else "SECOND CHANCE!")
+			return
 	var ad: bool = revives_left != 0 and Ads.is_available()
-	if ad or GameData.second_chances() > 0:
+	if ad:
 		get_tree().paused = true
-		revive_offer.open(GameData.second_chances(), ad)
+		revive_offer.open(revives_left, ad)
 	else:
 		finish_run()
 
@@ -410,6 +403,7 @@ func spawn_boss() -> void:
 		* (1.0 + levels_gained() * BALANCE.boss_health_per_player_level))
 	boss.move_speed = BALANCE.enemy_speed * final_type["speed"] * enemy_speed_scale()
 	boss.contact_damage = BALANCE.boss_damage
+	boss.hit_cap = BALANCE.map_boss_hit_cap  # Bosses are regular maps only
 	boss.coin_drop = BALANCE.boss_coins
 	boss.xp_drop = BALANCE.boss_xp
 	# Same big-sheet correction as elites, so a minotaur boss isn't enormous.
@@ -526,6 +520,8 @@ func make_enemy() -> CharacterBody2D:
 	enemy.flat_hit = enemy_type.get("flat_damage", false)
 	enemy.variant_tint = enemy_type.get("tint", Color.WHITE)
 	enemy.killed.connect(_on_enemy_killed)
+	# Elites and the boss raise this below. A normal hit never outranks an elite.
+	enemy.hit_cap = minf(BALANCE.map_hit_cap, BALANCE.map_elite_hit_cap)
 	return enemy  # Callers place it once its size is final (place_enemy)
 
 func place_enemy(enemy: CharacterBody2D) -> bool:
@@ -569,7 +565,10 @@ func spawn_elite() -> bool:
 	# Base elite stats come from res://config/balance.tres.
 	elite.max_health = BALANCE.elite_health + int(elapsed / 60.0) * BALANCE.elite_health_per_minute
 	elite.move_speed = BALANCE.elite_speed * enemy_type["speed"] * enemy_speed_scale()  # Slower, scarier
-	elite.contact_damage = BALANCE.elite_damage
+	elite.contact_damage = BALANCE.map_elite_damage
+	elite.hit_cap = BALANCE.map_elite_hit_cap
+	if endless:
+		elite.hit_growth = BALANCE.endless_elite_damage_growth  # Reaches its cap at ~20 min
 	elite.xp_drop = 10              # Kill reward: a shower of orbs
 	elite.killed.connect(GameData.quest_add.bind("elite", 1))
 	# Physically huge. Sheets bigger than the usual 192px frame need less
@@ -589,10 +588,45 @@ func spawn_elite() -> bool:
 	return true
 
 func fit_hud() -> void:
-	# Too narrow for the clock beside the health bar: it drops to the next row.
+	layout_hud()
+
+func layout_hud() -> void:
+	# Top-left column, top to bottom:
+	#   1. the Level ribbon (on phones, the timer right under it)
+	#   2. this run's consumables (Elixir, Charm, Tome), wrapping onto more
+	#      rows rather than running past the health bar
+	#   3. timed boosts won from ads, newest last
+	#   4. the ad offer card, when one is up
+	# Each part pushes the ones below it down. Runs every frame: cheap, and
+	# follows the Level ribbon widening at level 10 and things coming and going.
+	var level: Control = $HUD/LevelLabel
+	var hp: Control = $HUD/HPBar
+	var below: float = level.position.y + level.size.y
 	var clock: Label = $HUD/TimerLabel
-	clock.offset_top = 92.0 if WindowControls.is_narrow() else 26.0
-	clock.offset_bottom = clock.offset_top + 60.0
+	if WindowControls.is_narrow():
+		# No room beside the health bar: the timer goes under the Level row.
+		clock.anchor_left = 0.0
+		clock.anchor_right = 0.0
+		clock.offset_left = level.position.x
+		clock.offset_right = level.position.x + maxf(180.0, clock.get_minimum_size().x)
+		clock.offset_top = below + 4.0
+		clock.offset_bottom = clock.offset_top + 60.0
+		below = clock.offset_top + maxf(clock.size.y, 60.0)
+	else:
+		clock.anchor_left = 0.5
+		clock.anchor_right = 0.5
+		clock.offset_left = -90.0
+		clock.offset_right = 90.0
+		clock.offset_top = 26.0
+		clock.offset_bottom = 86.0
+	if effect_icons:
+		effect_icons.position = Vector2(level.position.x, below + 6.0)
+		effect_icons.max_right = hp.position.x + hp.size.x + 10.0
+		effect_icons.place_icons()
+		if not effect_icons.shown.is_empty():
+			below = effect_icons.bottom() + 2.0
+	if ad_card:
+		ad_card.set_column(Vector2(level.position.x, below + 8.0))
 
 func show_map_banner(text: String = "") -> void:
 	# The map's name fades out over the first few seconds of a run (and in
@@ -610,8 +644,12 @@ func show_map_banner(text: String = "") -> void:
 	banner.offset_left = -220.0
 	banner.offset_right = 220.0
 	banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	# Below the clock and clear of the consumable icons beside the Level ribbon.
-	banner.offset_top = 170.0 if WindowControls.is_narrow() else 150.0
+	# Below the clock and clear of the left column.
+	# On phones the left column (Level, timer, ad card) fills the top, so the
+	# banner goes below it instead of on top of it.
+	banner.offset_top = 150.0
+	if WindowControls.is_narrow() and ad_card:
+		banner.offset_top = ad_card.home.y + ad_card.CARD_SIZE.y + 12.0
 	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	$HUD.add_child(banner)
 	var tween := banner.create_tween()

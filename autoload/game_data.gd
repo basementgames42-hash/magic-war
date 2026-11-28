@@ -29,7 +29,7 @@ var unlocked_characters: Array[String] = []
 # Unlocked but not yet celebrated on the hero select screen (saved), so the
 # lock-break plays there even if the game was closed in between.
 var new_unlocks: Array[String] = []
-var active_boosts: Array[String] = []  # Ad boosts running now: any of "gold", "xp", "drops"
+var active_boosts: Array[String] = []  # Ad boosts running now: any of "gold", "xp", "drops", "damage"
 var shop_from_run: bool = false # Upgrade shop opened from the game-over screen (Back = carry on)
 var shop_back_text: String = "Play Again"  # What the shop's Back says then ("Next Level" after a win)
 var map_to_celebrate: int = -1  # Map just unlocked, whose padlock breaks on map select (saved)
@@ -44,6 +44,8 @@ var stock: Dictionary = {}            # Consumables kept until used, id -> count
 var armed: Array[String] = []         # Next-run consumables bought and waiting (saved)
 var run_effects: Array[String] = []   # Next-run consumables working in this run
 var premium: Array[String] = []       # Premium upgrades owned (saved)
+var purchase_tokens: Array[String] = []  # Store purchases already granted (saved; see Store)
+const MAX_PURCHASE_TOKENS: int = 100
 var free_revive: bool = false         # Phoenix Feather's revive, still unused this run
 
 # --- Daily Quests ---
@@ -80,7 +82,9 @@ var loaded: bool = false  # No saving until the save has been read (see save_gam
 func _init() -> void:
 	# Read the save location as early as possible: test scripts start before
 	# _ready runs, and must never touch the real save.
-	for arg in OS.get_cmdline_user_args():
+	# Accepted before or after the `--` separator, so a misplaced flag can't
+	# quietly fall back to the real save.
+	for arg in OS.get_cmdline_args() + OS.get_cmdline_user_args():
 		if arg.begins_with("--save-file="):
 			save_path = arg.trim_prefix("--save-file=")
 
@@ -140,6 +144,11 @@ func xp_factor() -> float:
 		f *= ShopCatalog.INSIGHT_XP
 	return f
 
+func boost_damage_factor() -> float:
+	# Power Surge (timed ad boost), applied on every hit while it runs, on top
+	# of the Battle Elixir already in the weapon's damage.
+	return ShopCatalog.AD_DAMAGE_BOOST if "damage" in active_boosts else 1.0
+
 func damage_factor() -> float:
 	return ShopCatalog.ELIXIR_DAMAGE if "elixir" in run_effects else 1.0
 
@@ -164,7 +173,7 @@ func is_armed(id: String) -> bool:
 
 func can_buy_consumable(id: String) -> bool:
 	var item: Dictionary = ShopCatalog.consumable(id)
-	if item.is_empty() or coins < item["cost"]:
+	if item.is_empty() or gems < item["cost"]:  # Consumables cost gems
 		return false
 	if item["kind"] == "stock":
 		return stock_count(id) < item["max"]
@@ -174,12 +183,13 @@ func buy_consumable(id: String) -> bool:
 	if not can_buy_consumable(id):
 		return false
 	var item: Dictionary = ShopCatalog.consumable(id)
-	coins -= item["cost"]
+	gems -= item["cost"]
 	if item["kind"] == "stock":
 		stock[id] = stock_count(id) + 1
 	else:
 		armed.append(id)
 	save_game()
+	gems_changed.emit(gems)
 	return true
 
 func buy_premium(id: String) -> bool:
@@ -208,6 +218,17 @@ func add_stock(id: String) -> bool:
 	stock[id] = stock_count(id) + 1
 	save_game()
 	return true
+
+func has_purchase_token(token: String) -> bool:
+	return token in purchase_tokens
+
+func record_purchase_token(token: String) -> void:
+	# Real-money purchases already granted (see Store), so none pays out twice.
+	# Only the latest are kept: older ones are long since confirmed with the store.
+	purchase_tokens.append(token)
+	while purchase_tokens.size() > MAX_PURCHASE_TOKENS:
+		purchase_tokens.remove_at(0)
+	save_game()
 
 func second_chances() -> int:
 	# Revives that need no ad: Phoenix Feather's free one, then bought ones.
@@ -428,6 +449,7 @@ func save_game() -> void:
 		"quest_day": quest_day,
 		"quests": quests,
 		"quest_bonus_claimed": quest_bonus_claimed,
+		"purchase_tokens": purchase_tokens,
 	}
 	var file := FileAccess.open(save_path, FileAccess.WRITE)
 	file.store_string(JSON.stringify(data))
@@ -473,6 +495,8 @@ func load_game() -> void:
 	for id in data.get("premium", []):
 		if not ShopCatalog.premium(str(id)).is_empty() and not str(id) in premium:
 			premium.append(str(id))
+	for token in data.get("purchase_tokens", []):
+		purchase_tokens.append(str(token))
 	quest_day = str(data.get("quest_day", ""))
 	quest_bonus_claimed = bool(data.get("quest_bonus_claimed", false))
 	quests.clear()

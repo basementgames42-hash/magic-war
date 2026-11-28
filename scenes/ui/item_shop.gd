@@ -14,7 +14,7 @@ var tab: String = "items"
 var panel: PanelContainer
 var hint_label: Label
 const HINTS: Dictionary = {
-	"items": "Spend coins. Hold one of each, kept until used. Boosts work for your next run.",
+	"items": "Spend gems. Hold one of each, kept until used. Boosts work for your next run.",
 	"premium": "Spend gems. Bought once, kept forever. Earn gems from Daily Quests.",
 	"gems": "Trade coins for gems. Packs are optional: everything can be earned by playing.",
 }
@@ -133,11 +133,11 @@ func build_items() -> void:
 		var held: int = GameData.stock_count(id) if item["kind"] == "stock" else int(GameData.is_armed(id))
 		var limit: int = item.get("max", 1)
 		tag = "%d / %d" % [held, limit]
-		b = done_button("Owned") if held >= limit else price_button(item["cost"], false)
+		b = done_button("Owned") if held >= limit else price_button(item["cost"], true)
 		if not b.disabled:
 			b.pressed.connect(func():
 				if GameData.buy_consumable(id):
-					Audio.play("coin", 0.0, 0.0)
+					Audio.play("level_up", 0.0, 0.0)
 					refresh())
 		list.add_child(ShopUI.card(ShopUI.icon(item["icon"]), item["name"], item["desc"], b, tag))
 
@@ -172,7 +172,7 @@ func build_gems() -> void:
 	for pack in ShopCatalog.GEM_PACKS:
 		var id: String = pack["id"]
 		var b := Button.new()
-		b.text = pack["price"]
+		b.text = Store.price_text(id)  # The store's price, in the player's currency
 		b.pressed.connect(func():
 			Store.buy(id, func(paid: bool):
 				if paid:
@@ -188,7 +188,7 @@ func build_gems() -> void:
 		ab = done_button("Owned")
 	else:
 		ab = Button.new()
-		ab.text = all["price"]
+		ab.text = Store.price_text(all["id"])
 		ab.pressed.connect(func():
 			Store.buy(all["id"], func(paid: bool):
 				if paid:
@@ -196,3 +196,23 @@ func build_gems() -> void:
 				refresh()))
 	list.add_child(ShopUI.card(ShopUI.icon(all["icon"]), all["name"], all["desc"], ab,
 		"Owned" if owned_all else "Best value"))
+	# Restore Purchases: gets Unlock Everything back on a new phone or after a
+	# reinstall (the stores require this button).
+	var restore := Button.new()
+	restore.text = "Restore Purchases"
+	restore.custom_minimum_size = Vector2(260, 52)
+	restore.add_theme_font_size_override("font_size", 20)
+	restore.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	restore.pressed.connect(func():
+		restore.disabled = true
+		restore.text = "Checking..."
+		Store.restore(func(found: bool):
+			if not is_instance_valid(restore):
+				return
+			if found:
+				Audio.play("level_up", 0.0, 0.0)
+				refresh()
+			else:
+				restore.disabled = false
+				restore.text = "Nothing to restore"))
+	list.add_child(restore)

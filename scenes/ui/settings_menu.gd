@@ -11,6 +11,7 @@ const TITLE_SCENE := "res://scenes/ui/title_screen.tscn"
 const GAME_SCENE := "res://scenes/main.tscn"
 
 var was_paused: bool = false
+var privacy_button: Button
 
 func _ready() -> void:
 	visible = false
@@ -22,6 +23,15 @@ func _ready() -> void:
 	%SfxSlider.value = Audio.get_volume("SFX")
 	%MusicSlider.value_changed.connect(_on_music_changed)
 	%SfxSlider.value_changed.connect(_on_sfx_changed)
+	# Privacy Options: change the ad consent choice. Only where Google's
+	# consent form applied (EU / UK players on phones), and required there.
+	privacy_button = %DamageNumbersButton.duplicate(0)  # Same look, none of its wiring
+	privacy_button.unique_name_in_owner = false
+	privacy_button.text = "Privacy Options"
+	privacy_button.pressed.connect(func():
+		close()
+		Ads.show_privacy_options())
+	%DamageNumbersButton.add_sibling(privacy_button)
 
 func toggle() -> void:
 	if visible:
@@ -59,6 +69,7 @@ func close() -> void:
 
 func refresh() -> void:
 	%DamageNumbersButton.text = "Damage Numbers: %s" % ("On" if GameData.show_damage_numbers else "Off")
+	privacy_button.visible = Ads.privacy_options_available()
 
 func _on_damage_numbers_pressed() -> void:
 	# Floating hit numbers over the player and enemies. Saved straight away,

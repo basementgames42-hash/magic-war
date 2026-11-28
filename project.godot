@@ -30,6 +30,10 @@ Store="*res://autoload/store.gd"
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/AdmobPlugin/plugin.cfg", "res://addons/GodotGooglePlayBilling/plugin.cfg")
+
 [gui]
 
 theme/custom="res://scenes/ui/skin/ui_theme.tres"
@@ -59,10 +63,11 @@ move_left={
 
 [physics]
 
-3d/physics_engine="Jolt Physics"
 common/max_physics_steps_per_frame=2
+3d/physics_engine="Jolt Physics"
 
 [rendering]
 
 rendering_device/driver.windows="d3d12"
 renderer/rendering_method="mobile"
+textures/vram_compression/import_etc2_astc=true

@@ -11,3 +11,12 @@ project.godot.bak
 # the raw files in a public repo. They still ship inside the exported .pck.
 # Keep your own backup of this folder.
 /scenes/assets/
+
+# Local iOS exports (the GitHub workflow makes its own). ~370 MB, never commit.
+/build/ios/
+
+# Local Android builds (.apk / .aab), and the upload signing key: never commit
+# a keystore. Keep your own safe backup of the release keystore instead.
+/build/android/
+*.keystore
+*.jks

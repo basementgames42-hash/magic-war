@@ -8,18 +8,18 @@ class_name ShopCatalog
 #     or bought in packs through the Store (real money, optional).
 # Coins can be traded for gems (the Gem Exchange); gems never turn back into coins.
 
-# Consumables, bought with coins. "kind":
+# Consumables, bought with gems. "kind":
 #   "stock"    - kept until used (Second Chance: used when you die)
 #   "next_run" - kept (saved) until your next run starts, which uses it up
 # The player can hold one of each at a time (the Shop shows 0 / 1 or 1 / 1).
 const CONSUMABLES: Array[Dictionary] = [
-	{"id": "second_chance", "icon": "potion_round_gold", "name": "Second Chance", "kind": "stock", "cost": 3000, "max": 1,
+	{"id": "second_chance", "icon": "potion_round_gold", "name": "Second Chance", "kind": "stock", "cost": 100, "max": 1,
 		"desc": "Revive where you fell. No ad needed."},
-	{"id": "elixir", "icon": "potion_flask_amber", "name": "Battle Elixir", "kind": "next_run", "cost": 3000,
+	{"id": "elixir", "icon": "potion_flask_amber", "name": "Battle Elixir", "kind": "next_run", "cost": 100,
 		"desc": "+25% damage for your next run."},
-	{"id": "charm", "icon": "clover", "name": "Lucky Charm", "kind": "next_run", "cost": 3000,
+	{"id": "charm", "icon": "clover", "name": "Lucky Charm", "kind": "next_run", "cost": 100,
 		"desc": "+50% gold for your next run."},
-	{"id": "tome", "icon": "book_blue", "name": "Wisdom Tome", "kind": "next_run", "cost": 3000,
+	{"id": "tome", "icon": "book_blue", "name": "Wisdom Tome", "kind": "next_run", "cost": 100,
 		"desc": "+50% EXP for your next run."},
 ]
 
@@ -53,24 +53,22 @@ const TITAN_HP: int = 25
 const GEM_EXCHANGE: Dictionary = {"id": "gem_exchange", "icon": "gem_opal", "name": "Gem Exchange",
 	"coins": 20000, "gems": 1, "desc": "Trade 20,000 coins for 1 gem."}
 
-# In-run ad offers: the card under the Level ribbon. Watch an ad, get the
-# reward. Only things that cost coins in the Shop (never gem items), plus
-# gems themselves. "kind":
-#   "boost"  - x2 gold / EXP / drops for BALANCE.boost_seconds
-#   "stock"  - a free Shop consumable kept until used (Second Chance)
-#   "effect" - a Shop boost working for the rest of THIS run
-#   "gems"   - gems, for watching "ads" ads back to back
+# In-run ad offers: the card under the Level ribbon. Watch an ad, get a
+# timed boost for BALANCE.boost_seconds (or, the one exception, 10 gems for
+# two ads back to back). The boosts are all timed and they all
+# stack: different boosts run side by side, the same one again adds more
+# time, and each multiplies with this run's consumables and premium upgrades
+# (e.g. Double Gold x Lucky Charm x Royal Treasury).
 const AD_OFFERS: Array[Dictionary] = [
 	{"id": "gold", "kind": "boost", "icon": "coin_stack", "title": "Double Gold", "detail": "x2 gold for %ds"},
 	{"id": "xp", "kind": "boost", "icon": "potion_bottle_green", "title": "Double EXP", "detail": "x2 EXP for %ds"},
 	{"id": "drops", "kind": "boost", "icon": "chest_wood", "title": "Double Drops", "detail": "x2 item drops for %ds"},
-	{"id": "second_chance", "kind": "stock", "icon": "potion_round_gold", "title": "Second Chance", "detail": "Revive once when you fall"},
-	{"id": "elixir", "kind": "effect", "icon": "potion_flask_amber", "title": "Battle Elixir", "detail": "+25% damage this run"},
-	{"id": "charm", "kind": "effect", "icon": "clover", "title": "Lucky Charm", "detail": "+50% gold this run"},
-	{"id": "tome", "kind": "effect", "icon": "book_blue", "title": "Wisdom Tome", "detail": "+50% EXP this run"},
+	{"id": "damage", "kind": "boost", "icon": "sword_ruby", "title": "Power Surge", "detail": "+50%% damage for %ds"},
+	# The one exception to "timed": gems, for watching two ads back to back.
 	{"id": "gems", "kind": "gems", "icon": "diamond", "title": "+%d Gems", "detail": "Watch %d short ads", "gems": 10, "ads": 2},
 ]
 const GEM_OFFERS_PER_RUN: int = 2  # The gem offer comes up at most this often in one run
+const AD_DAMAGE_BOOST: float = 1.5  # Power Surge: weapon damage multiplier while it runs
 
 # Gem packs, sold for real money through the Store autoload.
 const GEM_PACKS: Array[Dictionary] = [
