@@ -8,7 +8,7 @@ extends Control
 # res://config/balance.tres (boost_*). Its countdowns stop whenever the game
 # is paused, like everything in a run.
 #
-# Earned x2 boosts run on their own timers, listed under the card, so the card
+# Earned x2 boosts run on their own timers, listed above the card, so the card
 # goes away after the reward and the next offer still comes on schedule. Boosts
 # of different kinds stack; one already running is not offered again.
 
@@ -18,7 +18,7 @@ enum State { WAITING, OFFERING, WATCHING, REWARD }
 
 const CARD_SIZE := Vector2(340, 96)
 const TEXT_X: float = 86.0
-const HOME := Vector2(14, 156)
+var home := Vector2(14, 156)   # Set each frame by main.gd (stack_status_column)
 const GOLD := Color(1.0, 0.82, 0.32)
 const INK := Color(0.09, 0.11, 0.2, 0.94)
 
@@ -44,13 +44,13 @@ var clock: float = 0.0
 
 func _ready() -> void:
 	visible = false
-	position = HOME
+	position = home
 	size = CARD_SIZE
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	build()
 	# A sibling, not a child, so the list stays up while the card is hidden.
 	badges = VBoxContainer.new()
-	badges.position = HOME + Vector2(4, CARD_SIZE.y + 8)
+	badges.position = home + Vector2(0, CARD_SIZE.y + 8)
 	badges.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	badges.add_theme_constant_override("separation", 4)
 	add_sibling.call_deferred(badges)
@@ -166,13 +166,13 @@ func show_card(eyebrow_text: String, title_text: String, detail_text: String, cl
 	bar.visible = state == State.OFFERING
 	if not visible:
 		visible = true
-		position = HOME + Vector2(-CARD_SIZE.x - 30, 0)  # Slides in from the left
-		create_tween().tween_property(self, "position", HOME, 0.35) \
+		position = Vector2(home.x - CARD_SIZE.x - 30, home.y)  # Slides in from the left
+		create_tween().tween_property(self, "position:x", home.x, 0.35) \
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func hide_card() -> void:
 	var t := create_tween()
-	t.tween_property(self, "position", HOME + Vector2(-CARD_SIZE.x - 30, 0), 0.25) \
+	t.tween_property(self, "position:x", home.x - CARD_SIZE.x - 30, 0.25) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	t.tween_callback(func(): visible = false)
 
@@ -218,6 +218,8 @@ func _process(delta: float) -> void:
 				wait_for_next_offer()
 				hide_card()
 	tick_boosts(delta)
+	# Glides up or down when things above it in the column come or go.
+	position.y = lerpf(position.y, home.y, minf(1.0, delta * 12.0)) if visible else home.y
 	if visible:
 		glow.queue_redraw()
 		bar.queue_redraw()

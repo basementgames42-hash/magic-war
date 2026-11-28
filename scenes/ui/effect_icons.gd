@@ -1,5 +1,5 @@
 extends Control
-# Effect Icons: one small icon beside the Level ribbon for every consumable
+# Effect Icons: one small icon under the Level ribbon for every consumable
 # working in this run (Battle Elixir, Lucky Charm, Wisdom Tome), whether it
 # was bought in the Shop or won from an ad offer mid-run.
 # Tap an icon: a little label drops down under it saying what it does. The
@@ -23,17 +23,11 @@ var buttons: Dictionary = {}      # id -> Button
 var open_id: String = ""          # Whose label is showing ("" = none)
 var label_panel: PanelContainer = null
 var label_timer: float = 0.0
-var level: Control
-
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	level = get_parent().get_node_or_null("LevelLabel")
 
 func _process(delta: float) -> void:
-	# Sit just right of the Level ribbon (it widens at Level 10+).
-	if level != null:
-		position = Vector2(level.position.x + level.size.x + 4.0,
-			level.position.y + level.size.y * 0.5 - ICON_SIZE * 0.5 - 3.0)
+	# Placed by main.gd (stack_status_column), in a row under the Level ribbon.
 	if shown != GameData.run_effects:
 		sync_icons()
 	if label_panel != null and label_timer > 0.0:

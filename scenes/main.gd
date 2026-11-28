@@ -45,6 +45,8 @@ var boss: CharacterBody2D = null
 var boss_spawned: bool = false
 var boss_down: bool = false
 var boss_hud: Control
+var boost_offer: Control                    # Ad offer card + running ad boosts
+var effect_icons: Control                   # This run's consumables
 
 func _enter_tree() -> void:
 	# Before the player's _ready, so this run's shop consumables are working
@@ -63,8 +65,10 @@ func _ready() -> void:
 	revive_offer.declined.connect(finish_run)
 	revive_offer.chance_used.connect(_on_second_chance_used)
 	add_child(revive_offer)
-	$HUD.add_child(BOOST_OFFER.new())
-	$HUD.add_child(EFFECT_ICONS.new())  # Icons for this run's consumables, beside the Level ribbon
+	boost_offer = BOOST_OFFER.new()
+	$HUD.add_child(boost_offer)
+	effect_icons = EFFECT_ICONS.new()
+	$HUD.add_child(effect_icons)  # Icons for this run's consumables, under the Level ribbon
 	boss_hud = BOSS_HUD.new()
 	$HUD.add_child(boss_hud)
 	WindowControls.layout_changed.connect(fit_hud)
@@ -142,14 +146,33 @@ func _process(delta: float) -> void:
 		else:
 			enemy_type = enemy_order[mini(wave, enemy_order.size() - 1)]
 		update_damage_bonus()
+	stack_status_column()
 	if endless:
-		$HUD/TimerLabel.text += "  ·  Wave %d" % (wave + 1)
 		drift_map(delta)
 		check_unlocks()
 
 	# Elite alarm.
 	if elapsed >= next_elite_at and spawn_elite():
 		next_elite_at += elite_interval  # Not placed yet: tries again next frame
+
+func stack_status_column() -> void:
+	# One column down the left, under the Level ribbon, top to bottom:
+	#   1. consumables working this run (Elixir, Charm, Tome)
+	#   2. timed boosts won from ads (x2 Gold / EXP / Drops), newest last
+	#   3. the ad offer card, when one is up
+	# Each part pushes the ones below it down, so nothing overlaps.
+	var level: Control = $HUD/LevelLabel
+	var x: float = level.position.x
+	var y: float = level.position.y + level.size.y + 6.0
+	effect_icons.position = Vector2(x, y)
+	if not effect_icons.shown.is_empty():
+		y += EFFECT_ICONS.ICON_SIZE + 8.0
+	var badges: Control = boost_offer.badges
+	if badges != null:
+		badges.position = Vector2(x, y)
+		if not boost_offer.badge_nodes.is_empty():
+			y += badges.get_combined_minimum_size().y + 8.0
+	boost_offer.home = Vector2(x, y)
 
 func update_clock() -> void:
 	# Endless counts up (how long you've lasted). A map counts down to the
